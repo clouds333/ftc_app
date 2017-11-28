@@ -67,7 +67,7 @@ import java.util.Locale;
  * Use Android Studio to Copy this Class, and Paste it into your team's code folder with a new name.
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list.
  */
-@Autonomous(name = "Autonoumous_test: autonomous_test", group = "Sensor")
+@Autonomous(name = "Voyagerbot: Autonomous", group = "Sensor")
 //@Disabled                            // Comment this out to add to the opmode list
 public class VoyagerBotAuto extends LinearOpMode {
 
@@ -326,7 +326,7 @@ public class VoyagerBotAuto extends LinearOpMode {
         int relativeLayoutId = hardwareMap.appContext.getResources().getIdentifier("RelativeLayout", "id", hardwareMap.appContext.getPackageName());
         final View relativeLayout = ((Activity) hardwareMap.appContext).findViewById(relativeLayoutId);
 
-        //robot.colorServo.setPosition(1.0);
+        robot.colorServo.setPosition(1.0);
         init2();
         
         // wait for the start button to be pressed.
@@ -387,7 +387,7 @@ public class VoyagerBotAuto extends LinearOpMode {
             blueValue = sensorColor.blue();
             
             //Sensing if it is Red
-            if (redValue >80 && redValue > blueValue * 1.8) {
+            if (redValue > blueValue * 2) {
                 isJewelNotDetected = false;
                 telemetry.addData("red jewel detected ", redValue );
                 telemetry.update();
@@ -397,6 +397,7 @@ public class VoyagerBotAuto extends LinearOpMode {
                 encoderDrive(DRIVE_SPEED,  12,  12, 5.0);  // S1: Forward 47 Inches with 5 Sec timeout
 */
                 //Drive backwards
+                
                 robot.motorLeftFront.setPower(-FORWARD_SPEED-0.3);
                 robot.motorLeftBack.setPower(-FORWARD_SPEED-0.3);
                 robot.motorRightFront.setPower(-FORWARD_SPEED-0.3);
@@ -405,6 +406,7 @@ public class VoyagerBotAuto extends LinearOpMode {
                 while (opModeIsActive() && (runtime.seconds() < 0.5)) {
                     telemetry.addData("Path", "Leg 1: %2.5f S Elapsed", runtime.seconds());
                     telemetry.update();
+                    
                 
                 };
                 //Raising Arm back up
@@ -421,7 +423,7 @@ public class VoyagerBotAuto extends LinearOpMode {
                     
             
             //Blue
-            } else if (blueValue > 80 && blueValue > redValue * 1.8) {
+            } else if (blueValue > redValue * 2) {
                 isJewelNotDetected = false;
                 telemetry.addData("blue jewel detected ", blueValue );
                 telemetry.update();
@@ -453,7 +455,7 @@ public class VoyagerBotAuto extends LinearOpMode {
                 */
 
             } else {
-                telemetry.addData("No color jewel detected", redValue );
+                telemetry.addData("No color jewel detected", redValue);
                 telemetry.update();
             }
         }
