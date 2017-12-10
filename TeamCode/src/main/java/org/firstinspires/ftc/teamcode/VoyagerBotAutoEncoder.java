@@ -102,7 +102,7 @@ public class VoyagerBotAuto extends LinearOpMode {
     static final double     COUNTS_PER_INCH         = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
                                                       (WHEEL_DIAMETER_INCHES * 3.1415);
 
-    static final double     TURN_SPEED              = 0.5;
+    static final double     TURN_SPEED              = 0.3;
     static final double     FORWARD_SPEED           = 0.6;
     static final double     DRIVE_SPEED             = 0.5;
     static final double     FAST_SPEED              = 0.7;
@@ -126,7 +126,7 @@ public class VoyagerBotAuto extends LinearOpMode {
        public Orientation next() { return fromInt((ordinal()+1)%amount); }
     }
 
-    public Orientation startOrientation = Orientation.BLUE_2;
+    public Orientation startOrientation = Orientation.BLUE_1;
     
     public static final String TAG = "Vuforia VuMark Sample";
 
@@ -376,7 +376,7 @@ public class VoyagerBotAuto extends LinearOpMode {
     public void runOpMode() {
         boolean isJewelNotDetected = true;
         
-        robot.init(hardwareMap);
+        robot.init(hardwareMap, true);
         // get a reference to the color sensor.
         sensorColor = hardwareMap.get(ColorSensor.class, "colorSensor");
 
@@ -417,13 +417,7 @@ public class VoyagerBotAuto extends LinearOpMode {
         // loop and read the RGB and distance data.
         // Note we use opModeIsActive() as our loop condition because it is an interruptible method.
         while (opModeIsActive()) {
-            // convert the RGB values to HSV values.
-            // multiply by the SCALE_FACTOR.
-            // then cast it back to int (SCALE_FACTOR is a double)
-            Color.RGBToHSV((int) (sensorColor.red() * SCALE_FACTOR),
-                    (int) (sensorColor.green() * SCALE_FACTOR),
-                    (int) (sensorColor.blue() * SCALE_FACTOR),
-                    hsvValues);
+
                     
             if (grabGlyph) {
                 doGrabGlyph(true);
@@ -436,17 +430,23 @@ public class VoyagerBotAuto extends LinearOpMode {
                 sleep(500);
             }
 
-            redValue = sensorColor.red();
-            blueValue = sensorColor.blue();
-            
             if (isJewelNotDetected == true) {
+                // convert the RGB values to HSV values.
+                // multiply by the SCALE_FACTOR.
+                // then cast it back to int (SCALE_FACTOR is a double)
+                Color.RGBToHSV((int) (sensorColor.red() * SCALE_FACTOR),
+                        (int) (sensorColor.green() * SCALE_FACTOR),
+                        (int) (sensorColor.blue() * SCALE_FACTOR),
+                        hsvValues);
+                redValue = sensorColor.red();
+                blueValue = sensorColor.blue();                
                 //Red
-                if (redValue > blueValue * 2) { 
+                if (redValue > blueValue * 1.2) { 
                     isJewelNotDetected = false;
                     knockOffJewel(true, startOrientation);
                     driveToCryptoBox(startOrientation, detectedVuMark);                    
                 
-                } else if (blueValue > redValue * 2) {
+                } else if (blueValue > redValue * 1.2) {
                 //Blue    
                     isJewelNotDetected = false;
                     knockOffJewel(false, startOrientation);
@@ -464,10 +464,10 @@ public class VoyagerBotAuto extends LinearOpMode {
         if (orientation == Orientation.BLUE_1 || orientation == Orientation.BLUE_2) {
           if (redDetected) {
             // we are blue, red detected, go backward and knockOffJewel
-            encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go backwards to knock jewel off
+            encoderDrive(SLOW_SPEED, 1.5, 1.5, 1.5, 1.5, 1.0); // go backwards to knock jewel off
             robot.colorServo.setPosition(0.0); //lift arm back up
             sleep(500);
-            encoderDrive(SLOW_SPEED, -2, -2, -2, -2, 1.0); // go to original position
+            encoderDrive(SLOW_SPEED, -3.5, -3.5, -3.5, -3.5, 1.0); // go to original position
           } else {
             // we are blue and blue detected, go forward to knockOffJewel
             encoderDrive(SLOW_SPEED, -2, -2, -2, -2, 1.0); // go backwards to knock jewel off
@@ -477,10 +477,10 @@ public class VoyagerBotAuto extends LinearOpMode {
         } else {
           // must be red alliance
           if (redDetected) {
-            encoderDrive(SLOW_SPEED, -2, -2, -2, -2, 1.5); // go backwards to knock jewel off
+            encoderDrive(SLOW_SPEED, -2, -2, -2, -2, 1.0); // go backwards to knock jewel off
             robot.colorServo.setPosition(0.0); //lift arm back up
             sleep(500);
-            encoderDrive(SLOW_SPEED, -2, -2, -2, -2, 1.5); // go to original position
+            encoderDrive(SLOW_SPEED, 3, 3, 3, 3, 1.0); // go to original position
           } else {
             encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go backwards to knock jewel off
             robot.colorServo.setPosition(0.0); //lift arm back up
@@ -498,36 +498,47 @@ public class VoyagerBotAuto extends LinearOpMode {
         }
 
         if (orientation == Orientation.BLUE_1) {
-          double bd = -22;
+          double bd = -8;
           bd = bd - cryptoOffset;
-          encoderDrive(DRIVE_SPEED, bd, bd, bd, bd, 3.0); // go backwards
-          encoderDrive(TURN_SPEED, 15, 15, -15, -15, 3.0); // turn right
-          encoderDrive(DRIVE_SPEED, 12, 12, 12, 12, 3.0); // go forwards
+          encoderDrive(SLOW_SPEED, -22, -22, -22, -22, 3.0); // go backwards
+          encoderDrive(SLOW_SPEED, bd, bd, bd, bd, 3.0); // go forwards    
+          encoderDrive(TURN_SPEED, 14, 14, -14, -14, 3.0); // turn right
+          encoderDrive(DRIVE_SPEED, 10, 10, 10, 10, 3.0); // go forwards
           doGrabGlyph(false);
           encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go forwards
         } else if (orientation == Orientation.BLUE_2) {
-          double bd = -22;
-          encoderDrive(DRIVE_SPEED, bd, bd, bd, bd, 3.0); // go backwards
-          encoderDrive(TURN_SPEED, -27, -27, 27, 27, 3.0); // turn left
-          encoderDrive(DRIVE_SPEED, 20 + cryptoOffset, 20 + cryptoOffset, 20+cryptoOffset, 20+cryptoOffset, 3.0); // go forwards
-          encoderDrive(TURN_SPEED, -13, -13, 13, 13, 3.0); // turn left
+          double bd = 45;
+          encoderDrive(SLOW_SPEED, -26, -26, -26, -26, 3.0); // go backwards
+          if (vuMark == RelicRecoveryVuMark.CENTER) {
+            encoderDrive(TURN_SPEED, bd + 3, bd + 3, -bd - 3, -bd - 3, 3.0); // turn left              
+          } else if (vuMark == RelicRecoveryVuMark.RIGHT) {
+            encoderDrive(TURN_SPEED, bd + 8, bd +8 , -bd - 8, -bd - 8, 3.0); // turn left     
+          } else {
+             encoderDrive(TURN_SPEED, bd, bd, -bd, -bd, 3.0); // 180                
+          }   
+          encoderDrive(SLOW_SPEED, 6, 6, 6, 6, 3.0); // go forwards
           doGrabGlyph(false);
           encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go forwards
         } else if (orientation == Orientation.RED_1) {
-          double bd = 22;
+          double bd = 3;
           bd = bd + cryptoOffset;
-          encoderDrive(SLOW_SPEED, bd, bd, bd, bd, 3.0); // go forwards
-          //encoderDrive(DRIVE_SPEED, 10, 10, 10, 10, 3.0); // go forwards          
-          encoderDrive(TURN_SPEED, 15, 15, -15, -15, 3.0); // turn right
-          //encoderDrive(DRIVE_SPEED, 12, 12, 12, 12, 3.0); // go forwards
+          encoderDrive(SLOW_SPEED, 20, 20, 20, 20, 3.0); // go forwards
+          encoderDrive(SLOW_SPEED, bd, bd, bd, bd, 3.0); // go forwards          
+          encoderDrive(TURN_SPEED, 16, 16, -16, -16, 3.0); // turn right
+          encoderDrive(DRIVE_SPEED, 10, 10, 10, 1, 3.0); // go forwards
           doGrabGlyph(false);
           encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go forwards
         } else if (orientation == Orientation.RED_2) {
-          double bd = 22;
-          encoderDrive(SLOW_SPEED, bd, bd, bd, bd, 3.0); // go forwards
-          encoderDrive(TURN_SPEED, 15, 15, -15, 15, 3.0); // turn left
-          encoderDrive(DRIVE_SPEED, 12 + cryptoOffset, 12 + cryptoOffset, 12+cryptoOffset, 12+cryptoOffset, 3.0); // go forwards
-          encoderDrive(TURN_SPEED, -13, -13, 13, 13, 3.0); // turn left
+          encoderDrive(SLOW_SPEED, 20, 20, 20, 20, 3.0); // go forwards
+          if (vuMark == RelicRecoveryVuMark.CENTER) {
+            encoderDrive(TURN_SPEED, -3, -3, 3, 3, 3.0); // turn left              
+          } else if (vuMark == RelicRecoveryVuMark.LEFT) {
+            encoderDrive(TURN_SPEED, -8, -8, 8, 8, 3.0); // turn left     
+          }    
+          encoderDrive(SLOW_SPEED, 9, 9, 9, 9, 3.0); // go forwards
+          //encoderDrive(TURN_SPEED, 15, 15, -15, 15, 3.0); // turn left
+          //encoderDrive(DRIVE_SPEED, 12 + cryptoOffset, 12 + cryptoOffset, 12+cryptoOffset, 12+cryptoOffset, 3.0); // go forwards
+          //encoderDrive(TURN_SPEED, -13, -13, 13, 13, 3.0); // turn left
           doGrabGlyph(false);
           encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go forwards
         }
