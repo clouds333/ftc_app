@@ -22,7 +22,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * Servo channel:  Servo to open left claw:  "left_hand"
  * Servo channel:  Servo to open right claw: "right_hand"
  */
-public class HardwarePushbot
+public class HardwareVoyagerbot
 {
     /* Public OpMode members. */
     //public DcMotor  leftMotor   = null;
@@ -32,7 +32,7 @@ public class HardwarePushbot
     public Servo    rightClaw   = null;
     public Servo    colorServo   = null;
     public Servo    liftServo   = null;
-
+    public Servo    backServo   = null;
 
     public DcMotor  motorLeftFront   = null;
     public DcMotor  motorLeftBack  = null;
@@ -47,12 +47,12 @@ public class HardwarePushbot
     private ElapsedTime period  = new ElapsedTime();
 
     /* Constructor */
-    public HardwarePushbot(){
+    public HardwareVoyagerbot(){
 
     }
 
     /* Initialize standard Hardware interfaces */
-    public void init(HardwareMap ahwMap) {
+    public void init(HardwareMap ahwMap, boolean setServo) {
         // Save reference to Hardware map
         hwMap = ahwMap;
 
@@ -88,10 +88,14 @@ public class HardwarePushbot
         rightClaw = hwMap.servo.get("rightArm");
         colorServo = hwMap.servo.get("colorServo");
         liftServo = hwMap.servo.get("liftServo");
-        leftClaw.setPosition(MID_SERVO);
-        rightClaw.setPosition(MID_SERVO);
-        colorServo.setPosition(MID_SERVO);
-        liftServo.setPosition(MID_SERVO);
+        backServo = hwMap.servo.get("backServo");
+        if (setServo) {
+            leftClaw.setPosition(MID_SERVO);
+            rightClaw.setPosition(MID_SERVO);
+            colorServo.setPosition(0.0);
+            liftServo.setPosition(MID_SERVO);
+            backServo.setPosition(1.0);
+        }
 
     }
 
