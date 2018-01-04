@@ -33,6 +33,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 /**
  * This OpMode uses the common Pushbot hardware class to define the devices on the robot.
@@ -52,14 +53,16 @@ import com.qualcomm.robotcore.util.Range;
 @TeleOp public class VoyagerBotTeleop extends LinearOpMode {
 
     /* Declare OpMode members. */
-    HardwarePushbot robot           = new HardwarePushbot();   // Use a Pushbot's hardware
+    HardwareVoyagerbot robot           = new HardwareVoyagerbot();   // Use a Pushbot's hardware
                                                                // could also use HardwarePushbotMatrix class.
     double          clawOffset      = 0;                       // Servo mid position
     final double    CLAW_SPEED      = 0.05 ;                   // sets rate to move servo
     double          liftOffset      = 0;
     double          liftPosition   = 0;
-    final double    LIFT_SPEED      =0.20    ;
-    int             liftDirection   = 0;
+    final double    LIFT_SPEED      =0.20;
+    private ElapsedTime liftElapsedTime = new ElapsedTime();
+    int             liftTimeout     = 0;
+
     @Override
     public void runOpMode() {
         double left;
@@ -67,19 +70,21 @@ import com.qualcomm.robotcore.util.Range;
         double drive;
         double turn;
         double max;
+        boolean isLifting = false;
+        int liftDirection = 0;
 
         /* Initialize the hardware variables.
          * The init() method of the hardware class does all the work here
          */
-        robot.init(hardwareMap);
+        robot.init(hardwareMap, false);
 
         // Send telemetry message to signify robot waiting;
         telemetry.addData("Say", "Hello Driver");    //
         telemetry.update();
-        
+
         // set the arm to normal position
-        robot.colorServo.setPosition(0.0);
-        
+        robot.colorServo.setPosition(0.2);
+
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
 
@@ -111,54 +116,90 @@ import com.qualcomm.robotcore.util.Range;
             robot.motorRightBack.setPower(right);
 
             // Use gamepad left & right Bumpers to open and close the claw
-            if (gamepad1.right_bumper)
+            if (gamepad2.right_bumper)
                 clawOffset += CLAW_SPEED;
-            else if (gamepad1.left_bumper)
+            else if (gamepad2.left_bumper)
                 clawOffset -= CLAW_SPEED;
+                
+            if (gamepad1.left_bumper)
+                robot.backServo.setPosition(0.0);
+            else if (gamepad1.right_bumper)
+                robot.backServo.setPosition(1.0);
 
             // Move both servos to new position.  Assume servos are mirror image of each other.
             clawOffset = Range.clip(clawOffset, -0.4, 0.4);
             robot.leftClaw.setPosition(robot.MID_SERVO + clawOffset);
             robot.rightClaw.setPosition(robot.MID_SERVO - clawOffset);
-                
+
+
+            // increase of decrease speed of motors
+            // how to do this, damp the power by a factor
 
              //Use gamepad buttons to move arm up (Y) and down (A)
-            if (gamepad1.y) {
+            if (gamepad2.y) {
                 liftOffset += LIFT_SPEED;
-            } else if (gamepad1.a) {
-                liftOffset -= LIFT_SPEED;  
-                liftDirection = 2;
-            }    
-            else if (gamepad1.b) {
-                liftOffset=0.0;
-                liftDirection = 0;
+            } else if (gamepad2.a) {
+                liftOffset -= LIFT_SPEED;
             }
-        
+            else if (gamepad2.b) {
+                liftOffset=0.0;
+            }
+
             liftOffset = Range.clip(liftOffset, -0.5, 0.5);
             robot.liftServo.setPosition(robot.MID_SERVO + liftOffset);
 
-            if (gamepad2.y) {
-                robot.liftServo.setPosition(robot.MID_SERVO + 0.5);
-                sleep(5500);
-                robot.liftServo.setPosition(0.0);                
-            } else if (gamepad2.a) {
-                robot.liftServo.setPosition(robot.MID_SERVO -0.5);
-                sleep(4700);
-                robot.liftServo.setPosition(0.0); 
-            } else if (gamepad2.x) {
-                robot.liftServo.setPosition(robot.MID_SERVO+0.5);
-                sleep(1000);
-                robot.liftServo.setPosition(0.0);                
-            } else if (gamepad2.b) {
-                robot.liftServo.setPosition(robot.MID_SERVO-0.5);
-                sleep(1000);
-                robot.liftServo.setPosition(0.0);    
+            if (isLifting) {
+                if (liftElapsedTime.milliseconds() > liftTimeout) {
+                    robot.liftServo.setPosition(0.0);
+                    isLifting = false;
+                } else {
+                    if (liftDirection == 0) {
+                        robot.liftServo.setPosition(robot.MID_SERVO + 0.5);
+                    } else {
+                        robot.liftServo.setPosition(robot.MID_SERVO - 0.5);                        
+                    }
+                }
             }
-            
+
+            if (gamepad1.y) {
+                robot.liftServo.setPosition(robot.MID_SERVO + 0.5);
+                isLifting = true;
+                liftDirection = 0;
+                liftTimeout = 5500;
+                liftElapsedTime.reset();
+                //sleep(5500);
+                //robot.liftServo.setPosition(0.0);
+            } else if (gamepad1.a) {
+                robot.liftServo.setPosition(robot.MID_SERVO -0.5);
+                isLifting = true;
+                liftDirection = 1;
+                liftTimeout = 4700;
+                liftElapsedTime.reset();
+                //sleep(4700);
+                //robot.liftServo.setPosition(0.0);
+            } else if (gamepad1.x) {
+                robot.liftServo.setPosition(robot.MID_SERVO+0.5);
+                isLifting = true;
+                liftTimeout = 1000;
+                liftDirection = 0;
+                liftElapsedTime.reset();
+                //sleep(1000);
+                //robot.liftServo.setPosition(0.0);
+            } else if (gamepad1.b) {
+                robot.liftServo.setPosition(robot.MID_SERVO-0.5);
+                isLifting = true;
+                liftTimeout = 1000;
+                liftDirection = 1;
+                liftElapsedTime.reset();
+                //sleep(1000);
+                //robot.liftServo.setPosition(0.0);
+            }
+
             // Send telemetry message to signify robot running;
             telemetry.addData("claw",  "Offset = %.2f", clawOffset);
             telemetry.addData("liftOffset", "Offset=%.2f", liftOffset);
-            telemetry.addData("liftPosition", "liftPosition=%.2f", liftPosition);            
+            telemetry.addData("liftPosition", "liftPosition=%.2f", liftPosition);
+            telemetry.addData("liftTime=%.2f",liftElapsedTime.milliseconds());
             telemetry.addData("left",  "%.2f", left);
             telemetry.addData("right", "%.2f", right);
             telemetry.update();
