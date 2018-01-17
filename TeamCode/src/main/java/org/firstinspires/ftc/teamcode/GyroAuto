@@ -70,7 +70,7 @@ import java.util.Locale;
  * Use Android Studio to Copy this Class, and Paste it into your team's code folder with a new name.
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list.
  */
-@Autonomous(name = "Voyagerbot: Autonomous", group = "Sensor")
+@Autonomous(name = "Voyagerbot: Gyro Autonomous", group = "Sensor")
 //@Disabled                            // Comment this out to add to the opmode list
 public class GyroAuto extends LinearOpMode {
 
@@ -109,6 +109,13 @@ public class GyroAuto extends LinearOpMode {
     static final double     DRIVE_SPEED             = 0.5;
     static final double     FAST_SPEED              = 0.7;
     static final double     SLOW_SPEED              = 0.15;
+
+    
+
+    static final double     HEADING_THRESHOLD       = 1 ;      // As tight as we can make it with an integer gyro
+    static final double     P_TURN_COEFF            = 0.1;     // Larger is more responsive, but also less stable
+    static final double     P_DRIVE_COEFF           = 0.15;     // Larger is more responsive, but also less stable
+
 
     static final double     DRIVE_1_INCHES          = 3.0;
     static final double     DRIVE_2_INCHES          = 20.0;
@@ -374,117 +381,30 @@ public class GyroAuto extends LinearOpMode {
         telemetry.update();
     }
     
-    @Override
-    public void runOpMode() {
-        boolean isJewelNotDetected = true;
-        
-        robot.init(hardwareMap, true);
-        // get a reference to the color sensor.
-        sensorColor = hardwareMap.get(ColorSensor.class, "colorSensor");
 
-        // get a reference to the distance sensor that shares the same name.
-        sensorDistance = hardwareMap.get(DistanceSensor.class, "colorSensor");
-
-        // hsvValues is an array that will hold the hue, saturation, and value information.
-        float hsvValues[] = {0F, 0F, 0F};
-
-        // values is a reference to the hsvValues array.
-        final float values[] = hsvValues;
-
-        // sometimes it helps to multiply the raw RGB values with a scale factor
-        // to amplify/attentuate the measured values.
-        final double SCALE_FACTOR = 255;
-
-        int redValue = 0;
-        int blueValue = 0;
-        
-        // get a reference to the RelativeLayout so we can change the background
-        // color of the Robot Controller app to match the hue detected by the RGB sensor.
-        int relativeLayoutId = hardwareMap.appContext.getResources().getIdentifier("RelativeLayout", "id", hardwareMap.appContext.getPackageName());
-        final View relativeLayout = ((Activity) hardwareMap.appContext).findViewById(relativeLayoutId);
-
-        initRobot();
-        initVuMark();
-        robot.colorServo.setPosition(0.0);
-        relicTrackables.activate();
-        
-        // wait for the start button to be pressed.
-        //waitForStart();
-        while (!opModeIsActive() ) {
-           init_loop2();
-           // waitOneFullHardwareCycle();
-           sleep(50); // temporary fix to waitXXXHardwareCycle bug?
-        }
-        
-        // loop and read the RGB and distance data.
-        // Note we use opModeIsActive() as our loop condition because it is an interruptible method.
-        while (opModeIsActive()) {
-
-                    
-            if (grabGlyph) {
-                doGrabGlyph(true);
-                doLift();
-                grabGlyph = false;
-            }        
-            
-            if (isJewelNotDetected) {
-                robot.colorServo.setPosition(1.0);
-                sleep(1000);
-            }
-
-            if (isJewelNotDetected == true) {
-                // convert the RGB values to HSV values.
-                // multiply by the SCALE_FACTOR.
-                // then cast it back to int (SCALE_FACTOR is a double)
-                Color.RGBToHSV((int) (sensorColor.red() * SCALE_FACTOR),
-                        (int) (sensorColor.green() * SCALE_FACTOR),
-                        (int) (sensorColor.blue() * SCALE_FACTOR),
-                        hsvValues);
-                redValue = sensorColor.red();
-                blueValue = sensorColor.blue();                
-                //Red
-                if (redValue > blueValue * 1.5) { 
-                    isJewelNotDetected = false;
-                    knockOffJewel(true, startOrientation);
-                    driveToCryptoBox(startOrientation, detectedVuMark);                    
-                
-                } else if (blueValue > redValue * 1.5) {
-                //Blue    
-                    isJewelNotDetected = false;
-                    knockOffJewel(false, startOrientation);
-                    driveToCryptoBox(startOrientation, detectedVuMark);
-                } else {
-                    telemetry.addData("No color jewel detected", redValue);
-                    telemetry.update();
-                }
-            }
-        }
-
-    }
-    
     public void knockOffJewel(boolean redDetected, Orientation orientation) {
         if (orientation == Orientation.BLUE_1 || orientation == Orientation.BLUE_2) {
           if (redDetected) {
             // we are blue, red detected, go backward and knockOffJewel
-            encoderDrive(SLOW_SPEED, 1.5, 1.5, 1.5, 1.5, 1.0); // go backwards to knock jewel off
+            gyroDrive(SLOW_SPEED, 1.5, 0.0); // go backwards to knock jewel off
             robot.colorServo.setPosition(0.0); //lift arm back up
             sleep(500);
-            encoderDrive(SLOW_SPEED, -3.5, -3.5, -3.5, -3.5, 1.0); // go to original position
+            gyroDrive(SLOW_SPEED, -3.5, 0.0); // go to original position
           } else {
             // we are blue and blue detected, go forward to knockOffJewel
-            encoderDrive(SLOW_SPEED, -2, -2, -2, -2, 1.0); // go backwards to knock jewel off
+            gyroDrive(SLOW_SPEED, -2, 0.0); // go backwards to knock jewel off
             robot.colorServo.setPosition(0.0); //lift arm back up
             sleep(500);
           }
         } else {
           // must be red alliance
           if (redDetected) {
-            encoderDrive(SLOW_SPEED, -2, -2, -2, -2, 1.0); // go backwards to knock jewel off
+            gyroDrive(SLOW_SPEED, -2, 0.0); // go backwards to knock jewel off
             robot.colorServo.setPosition(0.0); //lift arm back up
             sleep(500);
-            encoderDrive(SLOW_SPEED, 3, 3, 3, 3, 1.0); // go to original position
+            gyroDrive(SLOW_SPEED, 3.4, 0.0); // go to original position
           } else {
-            encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go forwards to knock jewel off
+            gyroDrive(SLOW_SPEED, 2, 0.0); // go forwards to knock jewel off
             robot.colorServo.setPosition(0.0); //lift arm back up
             sleep(500);
           }
@@ -502,15 +422,15 @@ public class GyroAuto extends LinearOpMode {
         if (orientation == Orientation.BLUE_1) {
           double bd = -8;
           bd = bd - cryptoOffset;
-          encoderDrive(SLOW_SPEED, -22, -22, -22, -22, 3.0); // go backwards
-          encoderDrive(SLOW_SPEED, bd, bd, bd, bd, 3.0); // go forwards    
+          gyroDrive(SLOW_SPEED, -22, 0.0); // go backwards
+          gyroDrive(SLOW_SPEED, bd, 0.0); // go forwards    
           encoderDrive(TURN_SPEED, 14, 14, -14, -14, 3.0); // turn right
-          encoderDrive(DRIVE_SPEED, 10, 10, 10, 10, 3.0); // go forwards
+          gyroDrive(DRIVE_SPEED, 10, 0.0); // go forwards
           doGrabGlyph(false);
-          encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go forwards
+          gyroDrive(SLOW_SPEED, 2, 0.0); // go forwards
         } else if (orientation == Orientation.BLUE_2) {
           double bd = 45;
-          encoderDrive(SLOW_SPEED, -26, -26, -26, -26, 3.0); // go backwards
+          gyroDrive(SLOW_SPEED, -26, 0.0); // go backwards
           if (vuMark == RelicRecoveryVuMark.CENTER) {
             encoderDrive(TURN_SPEED, bd + 3, bd + 3, -bd - 3, -bd - 3, 3.0); // turn left              
           } else if (vuMark == RelicRecoveryVuMark.RIGHT) {
@@ -518,22 +438,22 @@ public class GyroAuto extends LinearOpMode {
           } else {
              encoderDrive(TURN_SPEED, bd, bd, -bd, -bd, 3.0); // 180                
           }
-          encoderDrive(SLOW_SPEED, 6, 6, 6, 6, 3.0); // go forwards
+          gyroDrive(SLOW_SPEED, 6, 0.0); // go forwards
           doGrabGlyph(false);
-          encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go forwards
+          gyroDrive(SLOW_SPEED, 2, 0.0); // go forwards
         } else if (orientation == Orientation.RED_1) {
           double bd = 2;
           bd = bd + cryptoOffset;
-          encoderDrive(SLOW_SPEED, 19.6, 19.6, 19.6, 19.6, 3.0); // go forwards
-          encoderDrive(SLOW_SPEED, bd, bd, bd, bd, 3.0); // go forwards          
+          gyroDrive(SLOW_SPEED, 19.6, 0.0); // go forwards
+          gyroDrive(SLOW_SPEED, bd, 0.0); // go forwards          
           encoderDrive(TURN_SPEED, 16.44, 16.44, -16.44, -16.44, 3.0); // turn right
-          encoderDrive(DRIVE_SPEED, 10, 10, 10, 10, 3.0); // go forwards
+          gyroDrive(DRIVE_SPEED, 10, 0.0); // go forwards
           doGrabGlyph(false);
-          encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go forwards
-          encoderDrive(DRIVE_SPEED, -5, -5, -5,-5,3.0); // backwards
+          gyroDrive(SLOW_SPEED, 2, 0.0); // go forwards
+          gyroDrive(DRIVE_SPEED, -5, 0.0); // backwards
 
         } else if (orientation == Orientation.RED_2) {
-          encoderDrive(SLOW_SPEED, 25, 25, 25, 25, 3.0); // go forwards
+          gyroDrive(SLOW_SPEED, 25, 0.0); // go forwards
           if (vuMark == RelicRecoveryVuMark.RIGHT) {
           encoderDrive(TURN_SPEED, -3.5, -3.5, 3.5, 3.5, 3.0); // turn left              
           } else if (vuMark == RelicRecoveryVuMark.LEFT) {
@@ -541,7 +461,7 @@ public class GyroAuto extends LinearOpMode {
           } else if (vuMark == RelicRecoveryVuMark.CENTER) {
             encoderDrive(TURN_SPEED, -5.5, -5.5, 5.5, 5.5, 3.0);
           }
-          encoderDrive(SLOW_SPEED, 11, 11, 11, 11, 3.0); // go forwards
+          gyroDrive(SLOW_SPEED, 11, 0.0); // go forwards
           encoderDrive(TURN_SPEED, 3.5, 3.5, -3.5, -3.5, 3.0);
           
               
@@ -549,8 +469,8 @@ public class GyroAuto extends LinearOpMode {
           //encoderDrive(DRIVE_SPEED, 12 + cryptoOffset, 12 + cryptoOffset, 12+cryptoOffset, 12+cryptoOffset, 3.0); // go forwards
           //encoderDrive(TURN_SPEED, -13, -13, 13, 13, 3.0); // turn left
           doGrabGlyph(false);
-          encoderDrive(SLOW_SPEED, 4.5, 4.5, 4.5, 4.5, 3.0); // go forwards
-          encoderDrive(DRIVE_SPEED, -5, -5, -5,-5,3.0); // backwards
+          gyroDrive(SLOW_SPEED, 4.5, 0.0); // go forwards
+          gyroDrive(DRIVE_SPEED, -5, 0.0); // backwards
         }
     }
     public void runOpMode() {
@@ -559,7 +479,7 @@ public class GyroAuto extends LinearOpMode {
          * Initialize the standard drive system variables.
          * The init() method of the hardware class does most of the work here
          */
-        robot.init(hardwareMap);
+        robot.init(hardwareMap, true);
         gyro = (ModernRoboticsI2cGyro)hardwareMap.gyroSensor.get("gyro");
 
         // Ensure the robot it stationary, then reset the encoders and calibrate the gyro.
@@ -599,7 +519,7 @@ public class GyroAuto extends LinearOpMode {
         // Step through each leg of the path,
         // Note: Reverse movement is obtained by setting a negative distance (not speed)
         // Put a hold after each turn
-        gyroDrive(DRIVE_SPEED, 48.0, 0.0);    // Drive FWD 48 inches
+       /* gyroDrive(DRIVE_SPEED, 48.0, 0.0);    // Drive FWD 48 inches
         gyroTurn( TURN_SPEED, -45.0);         // Turn  CCW to -45 Degrees
         gyroHold( TURN_SPEED, -45.0, 0.5);    // Hold -45 Deg heading for a 1/2 second
         gyroDrive(DRIVE_SPEED, 12.0, -45.0);  // Drive FWD 12 inches at 45 degrees
@@ -610,7 +530,7 @@ public class GyroAuto extends LinearOpMode {
         gyroDrive(DRIVE_SPEED,-48.0, 0.0);    // Drive REV 48 inches
 
         telemetry.addData("Path", "Complete");
-        telemetry.update();
+        telemetry.update();*/
     }
 
 
@@ -630,14 +550,18 @@ public class GyroAuto extends LinearOpMode {
                             double distance,
                             double angle) {
 
-        int     newLeftTarget;
-        int     newRightTarget;
+        int     newLeftFrontTarget;
+        int     newLeftBackTarget;
+        int     newRightFrontTarget;
+        int     newRightBackTarget;
         int     moveCounts;
         double  max;
         double  error;
         double  steer;
-        double  leftSpeed;
-        double  rightSpeed;
+        double  leftFrontSpeed;
+        double  leftBackSpeed;
+        double  rightFrontSpeed;
+        double  rightBackSpeed;
 
         // Ensure that the opmode is still active
         if (opModeIsActive()) {
@@ -669,7 +593,7 @@ public class GyroAuto extends LinearOpMode {
 
             // keep looping while we are still active, and BOTH motors are running.
             while (opModeIsActive() &&
-                   (robot.leftDrive.isBusy() && robot.rightDrive.isBusy())) {
+                   (robot.motorLeftFront.isBusy() && robot.motorLeftBack.isBusy()&& robot.motorRightFront.isBusy() && robot.motorRightBack.isBusy())) {
 
                 // adjust relative speed based on heading error.
                 error = getError(angle);
@@ -685,7 +609,7 @@ public class GyroAuto extends LinearOpMode {
                 rightBackSpeed = speed + steer;
 
                 // Normalize speeds if either one exceeds +/- 1.0;
-                max = Math.max(Math.abs(leftFrontSpeed),Math.abs(leftBackSpeed),Math.abs(rightFrontSpeed), Math.abs(rightBackSpeed));
+                max = Math.max(Math.abs(leftFrontSpeed),Math.abs(rightFrontSpeed));
                 if (max > 1.0)
                 {
                     leftFrontSpeed /= max;
@@ -703,7 +627,7 @@ public class GyroAuto extends LinearOpMode {
                 telemetry.addData("Err/St",  "%5.1f/%5.1f",  error, steer);
                 telemetry.addData("Target",  "%7d:%7d",      newLeftFrontTarget, newLeftBackTarget,  newRightFrontTarget, newRightBackTarget);
                 telemetry.addData("Actual",  "%7d:%7d",      robot.motorLeftFront.getCurrentPosition(),
-                                                             robot.rightDrive.getCurrentPosition(),
+                                                             robot.motorLeftBack.getCurrentPosition(),
                                                              robot.motorRightFront.getCurrentPosition(),
                                                              robot.motorRightBack.getCurrentPosition());
                 telemetry.addData("Speed",   "%5.2f:%5.2f",  leftFrontSpeed, leftBackSpeed, rightFrontSpeed, rightBackSpeed);
@@ -787,22 +711,28 @@ public class GyroAuto extends LinearOpMode {
         double   error ;
         double   steer ;
         boolean  onTarget = false ;
-        double leftSpeed;
-        double rightSpeed;
+        double leftFrontSpeed;
+        double leftBackSpeed;
+        double rightFrontSpeed;
+        double rightBackSpeed;
 
         // determine turn power based on +/- error
         error = getError(angle);
 
         if (Math.abs(error) <= HEADING_THRESHOLD) {
             steer = 0.0;
-            leftSpeed  = 0.0;
-            rightSpeed = 0.0;
+            leftFrontSpeed  = 0.0;
+            leftBackSpeed  = 0.0;
+            rightFrontSpeed  = 0.0;
+            rightBackSpeed = 0.0;
             onTarget = true;
         }
         else {
             steer = getSteer(error, PCoeff);
-            rightSpeed  = speed * steer;
-            leftSpeed   = -rightSpeed;
+            rightFrontSpeed  = speed * steer;
+            rightBackSpeed  = speed * steer;
+            leftFrontSpeed   = -rightFrontSpeed;
+            leftBackSpeed = -rightBackSpeed;
         }
 
         // Send desired speeds to motors.
@@ -814,7 +744,7 @@ public class GyroAuto extends LinearOpMode {
         // Display it for the driver.
         telemetry.addData("Target", "%5.2f", angle);
         telemetry.addData("Err/St", "%5.2f/%5.2f", error, steer);
-        telemetry.addData("Speed.", "%5.2f:%5.2f", leftSpeed, rightSpeed);
+        telemetry.addData("Speed.", "%5.2f:%5.2f", leftFrontSpeed, leftBackSpeed, rightFrontSpeed, rightBackSpeed);
 
         return onTarget;
     }
