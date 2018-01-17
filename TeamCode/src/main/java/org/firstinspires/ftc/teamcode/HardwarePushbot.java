@@ -30,14 +30,19 @@ public class HardwareVoyagerbot
     //public DcMotor  armMotor    = null;
     public Servo    leftClaw    = null;
     public Servo    rightClaw   = null;
-    public Servo    colorServo   = null;
-    public Servo    liftServo   = null;
+    public Servo    colorServo  = null;
     public Servo    backServo   = null;
+    public Servo    relicArm    = null;
+    public Servo    relicClaw   = null;
 
     public DcMotor  motorLeftFront   = null;
     public DcMotor  motorLeftBack  = null;
     public DcMotor  motorRightFront   = null;
     public DcMotor  motorRightBack  = null;
+    public DcMotor  motorRelicLift = null;
+    public DcMotor  motorLeftIntake = null;
+    public DcMotor  motorRightIntake = null;
+    public DcMotor  liftMotor = null;
     public static final double MID_SERVO       =  0.5 ;
     public static final double ARM_UP_POWER    =  0.45 ;
     public static final double ARM_DOWN_POWER  = -0.45 ;
@@ -61,19 +66,26 @@ public class HardwareVoyagerbot
         motorLeftFront  = hwMap.dcMotor.get("m3");
         motorRightBack   = hwMap.dcMotor.get("m0");  //has encoder
         motorRightFront  = hwMap.dcMotor.get("m1");
-
+        motorRelicLift   = hwMap.dcMotor.get("relicLift"); //has encoder
+        liftMotor = hwMap.dcMotor.get("liftMotor");
+    
         //armMotor    = hwMap.dcMotor.get("left_arm");
         motorLeftFront.setDirection(DcMotor.Direction.FORWARD); // Set to REVERSE if using AndyMark motors
         motorLeftBack.setDirection(DcMotor.Direction.FORWARD); // Set to REVERSE if using AndyMark motors
         motorRightFront.setDirection(DcMotor.Direction.REVERSE);// Set to FORWARD if using AndyMark motors
         motorRightBack.setDirection(DcMotor.Direction.REVERSE);// Set to FORWARD if using AndyMark motors
-
+        motorRelicLift.setDirection(DcMotor.Direction.FORWARD);
+        liftMotor.setDirection(DcMotor.Direction.FORWARD);
+        
         // Set all motors to zero power
         motorLeftFront.setPower(0);
         motorLeftBack.setPower(0);
         motorRightFront.setPower(0);
         motorRightBack.setPower(0);
-        //armMotor.setPower(0);
+        motorRelicLift.setPower(0);
+        motorLeftIntake.setPower(0);
+        motorRightIntake.setPower(0);
+        liftMotor.setPower(0);
 
         // Set all motors to run without encoders.
         // May want to use RUN_USING_ENCODERS if encoders are installed.
@@ -81,20 +93,28 @@ public class HardwareVoyagerbot
         motorLeftBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         motorRightFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         motorRightBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        //armMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-
+        motorRelicLift.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        motorLeftIntake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        motorRightIntake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        liftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        
         // Define and initialize ALL installed servos.
         leftClaw = hwMap.servo.get("leftArm");
         rightClaw = hwMap.servo.get("rightArm");
         colorServo = hwMap.servo.get("colorServo");
-        liftServo = hwMap.servo.get("liftServo");
+        //liftServo = hwMap.servo.get("liftServo"); changed to motor
         backServo = hwMap.servo.get("backServo");
+        relicArm = hwMap.servo.get("relicArm");
+        relicClaw = hwMap.servo.get("relicClaw");
+        
         if (setServo) {
             leftClaw.setPosition(MID_SERVO);
             rightClaw.setPosition(MID_SERVO);
             colorServo.setPosition(0.0);
-            liftServo.setPosition(MID_SERVO);
+            //liftServo.setPosition(MID_SERVO); changed to motor
             backServo.setPosition(1.0);
+            relicArm.setPosition(1.0);
+            relicClaw.setPosition(MID_SERVO);
         }
 
     }
