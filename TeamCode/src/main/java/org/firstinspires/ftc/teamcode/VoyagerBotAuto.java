@@ -30,6 +30,7 @@
 package org.firstinspires.ftc.teamcode;
 
 import android.app.Activity;
+import java.util.EnumSet;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -63,7 +64,7 @@ import java.util.Locale;
  * This is an example LinearOpMode that shows how to use
  * the REV Robotics Color-Distance Sensor.
  *
- * It assumes the sensor is configured with the name
+ * It assumes the sensor is configured with the name 
  *
  * Use Android Studio to Copy this Class, and Paste it into your team's code folder with a new name.
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list.
@@ -92,7 +93,7 @@ public class VoyagerBotAuto extends LinearOpMode {
     ColorSensor sensorColor;
     DistanceSensor sensorDistance;
     private boolean grabGlyph = true;
-    HardwarePushbot robot  = new HardwarePushbot();   // Use a Pushbot's hardware
+    HardwareVoyagerbot robot  = new HardwareVoyagerbot();   // Use a Pushbot's hardware
     private ElapsedTime runtime = new ElapsedTime();
 
     static final double     COUNTS_PER_MOTOR_REV    = 1120 ;    // eg: TETRIX Motor Encoder
@@ -101,11 +102,11 @@ public class VoyagerBotAuto extends LinearOpMode {
     static final double     COUNTS_PER_INCH         = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
                                                       (WHEEL_DIAMETER_INCHES * 3.1415);
 
-    static final double     TURN_SPEED              = 0.5;
+    static final double     TURN_SPEED              = 0.3;
     static final double     FORWARD_SPEED           = 0.6;
     static final double     DRIVE_SPEED             = 0.5;
     static final double     FAST_SPEED              = 0.7;
-    static final double     SLOW_SPEED              = 0.4;
+    static final double     SLOW_SPEED              = 0.15;
 
     static final double     DRIVE_1_INCHES          = 3.0;
     static final double     DRIVE_2_INCHES          = 20.0;
@@ -118,10 +119,15 @@ public class VoyagerBotAuto extends LinearOpMode {
        BLUE_2,
        RED_1,
        RED_2;
+       private static final int amount = EnumSet.allOf(Orientation.class).size();
+       private static Orientation[] val = new Orientation[amount];
+       static{ for(Orientation q:EnumSet.allOf(Orientation.class)){ val[q.ordinal()]=q; } }
+       public static Orientation fromInt(int i) { return val[i]; }
+       public Orientation next() { return fromInt((ordinal()+1)%amount); }
     }
 
     public Orientation startOrientation = Orientation.BLUE_1;
-
+    
     public static final String TAG = "Vuforia VuMark Sample";
 
     OpenGLMatrix lastLocation = null;
@@ -133,7 +139,8 @@ public class VoyagerBotAuto extends LinearOpMode {
     VuforiaLocalizer vuforia;
     VuforiaTrackables relicTrackables = null;
     VuforiaTrackable relicTemplate = null;
-
+    RelicRecoveryVuMark detectedVuMark = RelicRecoveryVuMark.UNKNOWN;
+    
     public void initVuMark() {
       /*
        * To start up Vuforia, tell it the view that we wish to use for camera monitor (on the RC phone);
@@ -179,7 +186,7 @@ public class VoyagerBotAuto extends LinearOpMode {
 
     public RelicRecoveryVuMark detectVuMark() {
 
-
+    
       relicTrackables.activate();
 
       // reset the timeout
@@ -194,25 +201,25 @@ public class VoyagerBotAuto extends LinearOpMode {
                  */
                 RelicRecoveryVuMark vuMark = RelicRecoveryVuMark.from(relicTemplate);
                 if (vuMark != RelicRecoveryVuMark.UNKNOWN) {
-
+        
                     /* Found an instance of the template. In the actual game, you will probably
                      * loop until this condition occurs, then move on to act accordingly depending
                      * on which VuMark was visible. */
                     telemetry.addData("VuMark", "%s visible", vuMark);
-
+        
                     return vuMark;
                 }
                 else {
                     telemetry.addData("VuMark", "not visible");
                 }
-
+        
                 telemetry.update();
           }
       }
       return RelicRecoveryVuMark.UNKNOWN;
     }
-
-
+    
+    
     public void initRobot() {
 
         /*
@@ -229,12 +236,12 @@ public class VoyagerBotAuto extends LinearOpMode {
         robot.motorLeftBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         robot.motorLeftFront.setDirection(DcMotor.Direction.FORWARD);
         robot.motorLeftBack.setDirection(DcMotor.Direction.FORWARD);
-
+        
         robot.motorRightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         robot.motorRightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         robot.motorRightFront.setDirection(DcMotor.Direction.REVERSE);
         robot.motorRightBack.setDirection(DcMotor.Direction.REVERSE);
-
+        
         robot.motorLeftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         robot.motorLeftBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         robot.motorRightFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -266,7 +273,7 @@ public class VoyagerBotAuto extends LinearOpMode {
             newLeftTarget2 = robot.motorLeftBack.getCurrentPosition() + (int)(leftInches2 * COUNTS_PER_INCH);
             newRightTarget1 = robot.motorRightFront.getCurrentPosition() + (int)(rightInches1 * COUNTS_PER_INCH);
             newRightTarget2 = robot.motorRightBack.getCurrentPosition() + (int)(rightInches2 * COUNTS_PER_INCH);
-
+            
             robot.motorLeftFront.setTargetPosition(newLeftTarget1);
             robot.motorLeftBack.setTargetPosition(newLeftTarget2);
             robot.motorRightFront.setTargetPosition(newRightTarget1);
@@ -322,7 +329,7 @@ public class VoyagerBotAuto extends LinearOpMode {
             sleep(250);   // optional pause after each move
         }
     }
-
+    
     public void doGrabGlyph(boolean isClose) {
         double clawOffset = 0;
 
@@ -336,20 +343,40 @@ public class VoyagerBotAuto extends LinearOpMode {
         sleep (300);
 
     }
-
+    
     public void doLift() {
-        double liftOffset = 0.5;
+        double liftOffset = 0.5;       
         robot.liftServo.setPosition(robot.MID_SERVO + liftOffset);
         sleep(1000);
-        robot.liftServo.setPosition(robot.MID_SERVO);
+        robot.liftServo.setPosition(robot.MID_SERVO);  
         sleep(50);
     }
 
+    public void init_loop2() {
+        // read the gamepad
+        if (gamepad1.right_bumper) {
+          // switch the Orientation
+          startOrientation = startOrientation.next();
+
+        }
+        RelicRecoveryVuMark vuMark = RelicRecoveryVuMark.from(relicTemplate);
+        if (vuMark != RelicRecoveryVuMark.UNKNOWN) {
+            /* Found an instance of the template. In the actual game, you will probably
+             * loop until this condition occurs, then move on to act accordingly depending
+             * on which VuMark was visible. */
+             detectedVuMark = vuMark;
+            telemetry.addData("VuMark", "%s visible", vuMark);
+        }
+        telemetry.addData("Selected Orientation: ", startOrientation);
+        telemetry.addData("VuMark Found: ", vuMark);
+        telemetry.update();
+    }
+    
     @Override
     public void runOpMode() {
         boolean isJewelNotDetected = true;
-
-        robot.init(hardwareMap);
+        
+        robot.init(hardwareMap, true);
         // get a reference to the color sensor.
         sensorColor = hardwareMap.get(ColorSensor.class, "colorSensor");
 
@@ -368,7 +395,7 @@ public class VoyagerBotAuto extends LinearOpMode {
 
         int redValue = 0;
         int blueValue = 0;
-
+        
         // get a reference to the RelativeLayout so we can change the background
         // color of the Robot Controller app to match the hue detected by the RGB sensor.
         int relativeLayoutId = hardwareMap.appContext.getResources().getIdentifier("RelativeLayout", "id", hardwareMap.appContext.getPackageName());
@@ -377,101 +404,53 @@ public class VoyagerBotAuto extends LinearOpMode {
         initRobot();
         initVuMark();
         robot.colorServo.setPosition(0.0);
-
+        relicTrackables.activate();
+        
         // wait for the start button to be pressed.
-        waitForStart();
-        /**
-         * See if any of the instances of {@link relicTemplate} are currently visible.
-         * {@link RelicRecoveryVuMark} is an enum which can have the following values:
-         * UNKNOWN, LEFT, CENTER, and RIGHT. When a VuMark is visible, something other than
-         * UNKNOWN will be returned by {@link RelicRecoveryVuMark#from(VuforiaTrackable)}.
-         */
-        RelicRecoveryVuMark vuMark = detectVuMark();
-
+        //waitForStart();
+        while (!opModeIsActive() ) {
+           init_loop2();
+           // waitOneFullHardwareCycle();
+           sleep(50); // temporary fix to waitXXXHardwareCycle bug?
+        }
+        
         // loop and read the RGB and distance data.
         // Note we use opModeIsActive() as our loop condition because it is an interruptible method.
         while (opModeIsActive()) {
-            // convert the RGB values to HSV values.
-            // multiply by the SCALE_FACTOR.
-            // then cast it back to int (SCALE_FACTOR is a double)
-            Color.RGBToHSV((int) (sensorColor.red() * SCALE_FACTOR),
-                    (int) (sensorColor.green() * SCALE_FACTOR),
-                    (int) (sensorColor.blue() * SCALE_FACTOR),
-                    hsvValues);
 
+                    
             if (grabGlyph) {
                 doGrabGlyph(true);
                 doLift();
                 grabGlyph = false;
-            }
-
+            }        
+            
             if (isJewelNotDetected) {
                 robot.colorServo.setPosition(1.0);
-                sleep(300);
+                sleep(1000);
             }
 
-
-            // send the info back to driver station using telemetry function.
-            telemetry.addData("Distance (cm)",
-                    String.format(Locale.US, "%.02f", sensorDistance.getDistance(DistanceUnit.CM)));
-            telemetry.addData("Alpha", sensorColor.alpha());
-            telemetry.addData("Red  ", sensorColor.red());
-            telemetry.addData("Green", sensorColor.green());
-            telemetry.addData("Blue ", sensorColor.blue());
-            telemetry.addData("Hue", hsvValues[0]);
-
-            redValue = sensorColor.red();
-            blueValue = sensorColor.blue();
-
             if (isJewelNotDetected == true) {
+                // convert the RGB values to HSV values.
+                // multiply by the SCALE_FACTOR.
+                // then cast it back to int (SCALE_FACTOR is a double)
+                Color.RGBToHSV((int) (sensorColor.red() * SCALE_FACTOR),
+                        (int) (sensorColor.green() * SCALE_FACTOR),
+                        (int) (sensorColor.blue() * SCALE_FACTOR),
+                        hsvValues);
+                redValue = sensorColor.red();
+                blueValue = sensorColor.blue();                
                 //Red
-                if (redValue > blueValue * 2) { //If red is 2 times blue (to sense red)
+                if (redValue > blueValue * 1.5) { 
                     isJewelNotDetected = false;
-                    telemetry.addData("red jewel detected ", redValue );
-                    telemetry.update();
-                    //drive backwards
-                    encoderDrive(FAST_SPEED,  3,  3, 3, 3, 5.0);  // Drive forward to knock of jewel
-
-                    //Raising Arm back up
-                    robot.colorServo.setPosition(0.0);
-                    while (opModeIsActive() && (runtime.seconds() < 0.5)) {
-                        telemetry.addData("Path", "Leg 1: %2.5f S Elapsed", runtime.seconds());
-                        telemetry.update();
-                    }
-                    encoderDrive(FAST_SPEED,  18,  18, 18, 18, 5.0);  // Drive forward for 18 inches
-
-
-
-
-                //Blue
-                } else if (blueValue > redValue * 2) { //If blue is 2 times red (to sense blue)
+                    knockOffJewel(true, startOrientation);
+                    driveToCryptoBox(startOrientation, detectedVuMark);                    
+                
+                } else if (blueValue > redValue * 1.5) {
+                //Blue    
                     isJewelNotDetected = false;
-                    telemetry.addData("blue jewel detected ", blueValue );
-                    telemetry.update();
-
-                    encoderDrive(SLOW_SPEED, -3, -3, -3, -3, 2.0); // go backwards to knock jewel off
-
-                    robot.colorServo.setPosition(0.0); //lift arm back up
-                    // sleeping for 1 second
-                    sleep(500);
-                    /*runtime.reset();
-                    while (opModeIsActive() && (runtime.seconds() < 0.5)) {
-                        telemetry.addData("Path", "Leg 1: %2.5f S Elapsed", runtime.seconds());
-                        telemetry.update();
-                    }*/
-
-                    // check vuMarks
-                    int bd = -22;
-                    if (vuMark == RelicRecoveryVuMark.CENTER) {
-                        bd -= CRYPTO_BOX_INCHES;
-                    } else if (vuMark == RelicRecoveryVuMark.CENTER) {
-                        bd -= 2 * CRYPTO_BOX_INCHES;
-                    }
-                    encoderDrive(DRIVE_SPEED, bd, bd, bd, bd, 3.0); // go backwards
-                    encoderDrive(TURN_SPEED, 15, 15, -15, -15, 3.0); // turn
-                    encoderDrive(DRIVE_SPEED, 12, 12, 12, 12, 3.0); // go forwards
-                    doGrabGlyph(false);
-                    encoderDrive(SLOW_SPEED, 1, 1, 1, 1, 1.0); // go forwards
+                    knockOffJewel(false, startOrientation);
+                    driveToCryptoBox(startOrientation, detectedVuMark);
                 } else {
                     telemetry.addData("No color jewel detected", redValue);
                     telemetry.update();
@@ -480,5 +459,97 @@ public class VoyagerBotAuto extends LinearOpMode {
         }
 
     }
+    
+    public void knockOffJewel(boolean redDetected, Orientation orientation) {
+        if (orientation == Orientation.BLUE_1 || orientation == Orientation.BLUE_2) {
+          if (redDetected) {
+            // we are blue, red detected, go backward and knockOffJewel
+            encoderDrive(SLOW_SPEED, 1.5, 1.5, 1.5, 1.5, 1.0); // go backwards to knock jewel off
+            robot.colorServo.setPosition(0.0); //lift arm back up
+            sleep(500);
+            encoderDrive(SLOW_SPEED, -3.5, -3.5, -3.5, -3.5, 1.0); // go to original position
+          } else {
+            // we are blue and blue detected, go forward to knockOffJewel
+            encoderDrive(SLOW_SPEED, -2, -2, -2, -2, 1.0); // go backwards to knock jewel off
+            robot.colorServo.setPosition(0.0); //lift arm back up
+            sleep(500);
+          }
+        } else {
+          // must be red alliance
+          if (redDetected) {
+            encoderDrive(SLOW_SPEED, -2, -2, -2, -2, 1.0); // go backwards to knock jewel off
+            robot.colorServo.setPosition(0.0); //lift arm back up
+            sleep(500);
+            encoderDrive(SLOW_SPEED, 3, 3, 3, 3, 1.0); // go to original position
+          } else {
+            encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go forwards to knock jewel off
+            robot.colorServo.setPosition(0.0); //lift arm back up
+            sleep(500);
+          }
+        }
+    }
 
+    public void driveToCryptoBox(Orientation orientation, RelicRecoveryVuMark vuMark) {
+        double cryptoOffset = 0.0;
+        if (vuMark == RelicRecoveryVuMark.CENTER) {
+            cryptoOffset = CRYPTO_BOX_INCHES;
+        } else if (vuMark == RelicRecoveryVuMark.RIGHT) {
+            cryptoOffset = 2 * CRYPTO_BOX_INCHES;
+        }
+
+        if (orientation == Orientation.BLUE_1) {
+          double bd = -8;
+          bd = bd - cryptoOffset;
+          encoderDrive(SLOW_SPEED, -22, -22, -22, -22, 3.0); // go backwards
+          encoderDrive(SLOW_SPEED, bd, bd, bd, bd, 3.0); // go forwards    
+          encoderDrive(TURN_SPEED, 14, 14, -14, -14, 3.0); // turn right
+          encoderDrive(DRIVE_SPEED, 10, 10, 10, 10, 3.0); // go forwards
+          doGrabGlyph(false);
+          encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go forwards
+        } else if (orientation == Orientation.BLUE_2) {
+          double bd = 45;
+          encoderDrive(SLOW_SPEED, -26, -26, -26, -26, 3.0); // go backwards
+          if (vuMark == RelicRecoveryVuMark.CENTER) {
+            encoderDrive(TURN_SPEED, bd + 3, bd + 3, -bd - 3, -bd - 3, 3.0); // turn left              
+          } else if (vuMark == RelicRecoveryVuMark.RIGHT) {
+            encoderDrive(TURN_SPEED, bd + 8, bd +8 , -bd - 8, -bd - 8, 3.0); // turn left     
+          } else {
+             encoderDrive(TURN_SPEED, bd, bd, -bd, -bd, 3.0); // 180                
+          }
+          encoderDrive(SLOW_SPEED, 6, 6, 6, 6, 3.0); // go forwards
+          doGrabGlyph(false);
+          encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go forwards
+        } else if (orientation == Orientation.RED_1) {
+          double bd = 2;
+          bd = bd + cryptoOffset;
+          encoderDrive(SLOW_SPEED, 19.6, 19.6, 19.6, 19.6, 3.0); // go forwards
+          encoderDrive(SLOW_SPEED, bd, bd, bd, bd, 3.0); // go forwards          
+          encoderDrive(TURN_SPEED, 16.44, 16.44, -16.44, -16.44, 3.0); // turn right
+          encoderDrive(DRIVE_SPEED, 10, 10, 10, 10, 3.0); // go forwards
+          doGrabGlyph(false);
+          encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go forwards
+          encoderDrive(DRIVE_SPEED, -5, -5, -5,-5,3.0); // backwards
+
+        } else if (orientation == Orientation.RED_2) {
+          encoderDrive(SLOW_SPEED, 25, 25, 25, 25, 3.0); // go forwards
+          if (vuMark == RelicRecoveryVuMark.RIGHT) {
+          encoderDrive(TURN_SPEED, -3.5, -3.5, 3.5, 3.5, 3.0); // turn left              
+          } else if (vuMark == RelicRecoveryVuMark.LEFT) {
+            encoderDrive(TURN_SPEED, -11, -11, 11, 11,3.0);// turn left
+          } else if (vuMark == RelicRecoveryVuMark.CENTER) {
+            encoderDrive(TURN_SPEED, -5.5, -5.5, 5.5, 5.5, 3.0);
+          }
+          encoderDrive(SLOW_SPEED, 11, 11, 11, 11, 3.0); // go forwards
+          encoderDrive(TURN_SPEED, 3.5, 3.5, -3.5, -3.5, 3.0);
+          
+              
+          //encoderDrive(TURN_SPEED, 15, 15, -15, 15, 3.0); // turn left
+          //encoderDrive(DRIVE_SPEED, 12 + cryptoOffset, 12 + cryptoOffset, 12+cryptoOffset, 12+cryptoOffset, 3.0); // go forwards
+          //encoderDrive(TURN_SPEED, -13, -13, 13, 13, 3.0); // turn left
+          doGrabGlyph(false);
+          encoderDrive(SLOW_SPEED, 4.5, 4.5, 4.5, 4.5, 3.0); // go forwards
+          encoderDrive(DRIVE_SPEED, -5, -5, -5,-5,3.0); // backwards
+        }
+    }
+    
 }
