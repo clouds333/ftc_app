@@ -106,7 +106,7 @@ public class VoyagerBotAuto extends LinearOpMode {
     static final double     FORWARD_SPEED           = 0.6;
     static final double     DRIVE_SPEED             = 0.5;
     static final double     FAST_SPEED              = 0.7;
-    static final double     SLOW_SPEED              = 0.15;
+    static final double     SLOW_SPEED              = 0.10;
 
     static final double     DRIVE_1_INCHES          = 3.0;
     static final double     DRIVE_2_INCHES          = 20.0;
@@ -140,6 +140,7 @@ public class VoyagerBotAuto extends LinearOpMode {
     VuforiaTrackables relicTrackables = null;
     VuforiaTrackable relicTemplate = null;
     RelicRecoveryVuMark detectedVuMark = RelicRecoveryVuMark.UNKNOWN;
+    RelicRecoveryVuMark defaultLocation = RelicRecoveryVuMark.RIGHT;  // default to this if unknown
     
     public void initVuMark() {
       /*
@@ -216,7 +217,7 @@ public class VoyagerBotAuto extends LinearOpMode {
                 telemetry.update();
           }
       }
-      return RelicRecoveryVuMark.UNKNOWN;
+      return defaultLocation;
     }
     
     
@@ -334,9 +335,9 @@ public class VoyagerBotAuto extends LinearOpMode {
         double clawOffset = 0;
 
         if (isClose) {
-            clawOffset = 0.2;
-        } else {
             clawOffset = -0.2;
+        } else {
+            clawOffset = 0.2;
         }
         robot.leftClaw.setPosition(robot.MID_SERVO + clawOffset);
         robot.rightClaw.setPosition(robot.MID_SERVO - clawOffset);
@@ -345,11 +346,18 @@ public class VoyagerBotAuto extends LinearOpMode {
     }
     
     public void doLift() {
-        double liftOffset = 0.5;       
+        /*double liftOffset = 0.5;       
         robot.liftServo.setPosition(robot.MID_SERVO + liftOffset);
         sleep(1000);
         robot.liftServo.setPosition(robot.MID_SERVO);  
-        sleep(50);
+        sleep(50);*/
+        robot.liftMotor.setPower(0.5);
+        runtime.reset();
+        while (opModeIsActive() && (runtime.seconds() < 0.7)) {
+            telemetry.addData("Path", "Leg 1: %2.5f S Elapsed", runtime.seconds());
+            telemetry.update();
+        }
+        robot.liftMotor.setPower(0.0);
     }
 
     public void init_loop2() {
@@ -482,7 +490,7 @@ public class VoyagerBotAuto extends LinearOpMode {
             sleep(500);
             encoderDrive(SLOW_SPEED, 3, 3, 3, 3, 1.0); // go to original position
           } else {
-            encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go forwards to knock jewel off
+            encoderDrive(SLOW_SPEED, 2.5, 2.5, 2.5, 2.5, 1.0); // go forwards to knock jewel off
             robot.colorServo.setPosition(0.0); //lift arm back up
             sleep(500);
           }
@@ -513,7 +521,7 @@ public class VoyagerBotAuto extends LinearOpMode {
             encoderDrive(TURN_SPEED, bd + 3, bd + 3, -bd - 3, -bd - 3, 3.0); // turn left              
           } else if (vuMark == RelicRecoveryVuMark.RIGHT) {
             encoderDrive(TURN_SPEED, bd + 8, bd +8 , -bd - 8, -bd - 8, 3.0); // turn left     
-          } else {
+          } else if (vuMark == RelicRecoveryVuMark.LEFT) {
              encoderDrive(TURN_SPEED, bd, bd, -bd, -bd, 3.0); // 180                
           }
           encoderDrive(SLOW_SPEED, 6, 6, 6, 6, 3.0); // go forwards
@@ -522,7 +530,7 @@ public class VoyagerBotAuto extends LinearOpMode {
         } else if (orientation == Orientation.RED_1) {
           double bd = 2;
           bd = bd + cryptoOffset;
-          encoderDrive(SLOW_SPEED, 19.6, 19.6, 19.6, 19.6, 3.0); // go forwards
+          encoderDrive(SLOW_SPEED, 20, 20, 20, 20, 3.0); // go forwards
           encoderDrive(SLOW_SPEED, bd, bd, bd, bd, 3.0); // go forwards          
           encoderDrive(TURN_SPEED, 16.44, 16.44, -16.44, -16.44, 3.0); // turn right
           encoderDrive(DRIVE_SPEED, 10, 10, 10, 10, 3.0); // go forwards
@@ -531,23 +539,22 @@ public class VoyagerBotAuto extends LinearOpMode {
           encoderDrive(DRIVE_SPEED, -5, -5, -5,-5,3.0); // backwards
 
         } else if (orientation == Orientation.RED_2) {
-          encoderDrive(SLOW_SPEED, 25, 25, 25, 25, 3.0); // go forwards
+          encoderDrive(SLOW_SPEED, 29, 29, 29, 29, 4); // go forwards to get off balance beam
           if (vuMark == RelicRecoveryVuMark.RIGHT) {
-          encoderDrive(TURN_SPEED, -3.5, -3.5, 3.5, 3.5, 3.0); // turn left              
+            encoderDrive(TURN_SPEED, -9, -9, 9, 9, 4.0); // turn left              
           } else if (vuMark == RelicRecoveryVuMark.LEFT) {
-            encoderDrive(TURN_SPEED, -11, -11, 11, 11,3.0);// turn left
+            encoderDrive(TURN_SPEED, -5, -5, 5, 5, 3.0);// turn left
           } else if (vuMark == RelicRecoveryVuMark.CENTER) {
-            encoderDrive(TURN_SPEED, -5.5, -5.5, 5.5, 5.5, 3.0);
+            encoderDrive(TURN_SPEED, -7, -7, 7, 7, 3.0);
           }
           encoderDrive(SLOW_SPEED, 11, 11, 11, 11, 3.0); // go forwards
-          encoderDrive(TURN_SPEED, 3.5, 3.5, -3.5, -3.5, 3.0);
-          
-              
-          //encoderDrive(TURN_SPEED, 15, 15, -15, 15, 3.0); // turn left
-          //encoderDrive(DRIVE_SPEED, 12 + cryptoOffset, 12 + cryptoOffset, 12+cryptoOffset, 12+cryptoOffset, 3.0); // go forwards
-          //encoderDrive(TURN_SPEED, -13, -13, 13, 13, 3.0); // turn left
+          encoderDrive(TURN_SPEED, 3.5, 3.5, -3.5, -3.5, 3.0); // turn right to straighten up
           doGrabGlyph(false);
-          encoderDrive(SLOW_SPEED, 4.5, 4.5, 4.5, 4.5, 3.0); // go forwards
+          if (vuMark == RelicRecoveryVuMark.RIGHT) {
+            encoderDrive(SLOW_SPEED, 6, 6, 6, 6, 3.0); // go forwards              
+          } else {
+            encoderDrive(SLOW_SPEED, 4.5, 4.5, 4.5, 4.5, 3.0); // go forwards
+          }
           encoderDrive(DRIVE_SPEED, -5, -5, -5,-5,3.0); // backwards
         }
     }
