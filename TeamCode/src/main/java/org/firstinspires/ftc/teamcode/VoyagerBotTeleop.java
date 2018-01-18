@@ -30,6 +30,7 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.RobotCoreLynxUsbDevice;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -70,6 +71,44 @@ import com.qualcomm.robotcore.util.ElapsedTime;
     final double    RELIC_CLAW_SPEED = 0.02;
     double          relicArmOffset = 0;
     final double    RELIC_ARM_SPEED = 0.02;    
+    private ElapsedTime runtime = new ElapsedTime();
+    
+    public void encoderLift(double speed,
+                         int count,
+                         double timeoutS) {
+    
+        // Ensure that the opmode is still active
+        if (opModeIsActive()) {
+            robot.liftMotor.setTargetPosition(count);
+
+            // Turn On RUN_TO_POSITION
+            robot.liftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+            // reset the timeout time and start motion.
+            runtime.reset();
+            robot.liftMotor.setPower(Math.abs(speed));
+
+            // keep looping while we are still active, and there is time left, and both motors are running.
+            // Note: We use (isBusy() && isBusy()) in the loop test, which means that when EITHER motor hits
+            // its target position, the motion will stop.  This is "safer" in the event that the robot will
+            // always end the motion as soon as possible.
+            // However, if you require that BOTH motors have finished their moves before the robot continues
+            // onto the next step, use (isBusy() || isBusy()) in the loop test.
+            while (opModeIsActive() &&
+                   (runtime.seconds() < timeoutS) &&
+                   robot.liftMotor.isBusy()) {
+
+                // Display it for the driver.
+                telemetry.addData("lift Target",  "Running to %7d", count);
+                telemetry.addData("liftPosition ",  "Running at %7d",
+                                            robot.liftMotor.getCurrentPosition());
+                telemetry.update();
+            }
+
+            // Stop all motion;
+            robot.liftMotor.setPower(0);          
+        }
+    }
     
     @Override
     public void runOpMode() {
@@ -78,6 +117,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
         double drive;
         double turn;
         double max;
+        double relicExtend;
+        
         boolean isLifting = false;
         int liftDirection = 0;
 
@@ -126,6 +167,12 @@ import com.qualcomm.robotcore.util.ElapsedTime;
             robot.motorRightFront.setPower(right);
             robot.motorRightBack.setPower(right);
 
+
+            // use gamepad2 joystick to control relic extension
+            relicExtend  =  gamepad2.left_stick_x;
+            relicExtend = Range.clip(relicExtend, -0.3, 0.3);
+            robot.motorRelicLift.setPower(relicExtend);
+            
             // Use gamepad left & right Bumpers to open and close the claw
             if (gamepad2.right_bumper)
                 clawOffset += CLAW_SPEED;
@@ -133,45 +180,45 @@ import com.qualcomm.robotcore.util.ElapsedTime;
                 clawOffset -= CLAW_SPEED;
                
             // Use gamepad dpad_left and dpad_right to open relic claw
-            if (gamepad1.dpad_up)
+            if (gamepad2.dpad_down)
                 relicClawOffset += RELIC_CLAW_SPEED;
-            else if (gamepad1.dpad_down)
+            else if (gamepad2.dpad_up)
                 relicClawOffset -= RELIC_CLAW_SPEED;
-            else if(gamepad1.dpad_left)
+            else if(gamepad2.dpad_left)
                 relicArmOffset += RELIC_ARM_SPEED;
-            else if(gamepad1.dpad_right)
+            else if(gamepad2.dpad_right)
                 relicArmOffset -= RELIC_ARM_SPEED;
-            /*else if (gamepad2.left_bumper)
+            
+            else if (gamepad1.left_bumper)
                 robot.backServo.setPosition(0.0);
             else if (gamepad1.right_bumper)
-                robot.backServo.setPosition(1.0);*/
+                robot.backServo.setPosition(1.0);
+                
+            else if (gamepad1.dpad_left)
+                encoderLift(0.8, 300, 4);
+            else if (gamepad1.dpad_right)
+                encoderLift(0.8, 600, 4);                
+            else if (gamepad1.dpad_up)
+                encoderLift(0.8, 1300, 4);
+            else if (gamepad1.dpad_down)
+                encoderLift(0.8, 0, 4);
+            /*    
             else if(gamepad2.dpad_up)
                 robot.motorRelicLift.setPower(-0.25);
             else if(gamepad2.dpad_down)
                 robot.motorRelicLift.setPower(0);
             else if(gamepad2.dpad_left)
-                robot.motorRelicLift.setPower(0.25);
-            else if(gamepad2.left_bumper){
-                robot.motorLeftIntake.setPower(0.5);
-                robot.motorRightIntake.setPower(0.5);
-            }
-            else if(gamepad2.right_bumper){
-                robot.motorLeftIntake.setPower(0.0);
-                robot.motorRightIntake.setPower(0.0);
-                
-            }
-            
-            
+                robot.motorRelicLift.setPower(0.25);*/
 
             // Move both servos to new position.  Assume servos are mirror image of each other.
-            clawOffset = Range.clip(clawOffset, -0.4, 0.4);
+            clawOffset = Range.clip(clawOffset, -0.1, 0.1);
             robot.leftClaw.setPosition(robot.MID_SERVO + clawOffset);
             robot.rightClaw.setPosition(robot.MID_SERVO - clawOffset);
 
-            relicClawOffset = Range.clip(relicClawOffset, -0.5, 0.5);
-            robot.relicClaw.setPosition(robot.MID_SERVO + relicClawOffset);
+            relicClawOffset = Range.clip(relicClawOffset, 0, 0.86);
+            robot.relicClaw.setPosition(relicClawOffset);
             
-            relicArmOffset = Range.clip(relicArmOffset, 0.15, 0.87);
+            relicArmOffset = Range.clip(relicArmOffset, 0.00, 0.8);
             robot.relicArm.setPosition(relicArmOffset);
             
             // increase of decrease speed of motors
@@ -186,30 +233,17 @@ import com.qualcomm.robotcore.util.ElapsedTime;
                 liftOffset=0.0;
             }
 
-
-            liftOffset = Range.clip(liftOffset, -0.5, 0.5);
-            robot.liftServo.setPosition(robot.MID_SERVO + liftOffset);
-
-            if (isLifting) {
-                if (liftElapsedTime.milliseconds() > liftTimeout) {
-                    robot.liftServo.setPosition(0.0);
-                    isLifting = false;
-                } else {
-                    if (liftDirection == 0) {
-                        robot.liftServo.setPosition(robot.MID_SERVO + 0.5);
-                    } else {
-                        robot.liftServo.setPosition(robot.MID_SERVO - 0.5);                        
-                    }
-                }
-            }
+            robot.liftMotor.setPower(liftOffset);
+            liftOffset = Range.clip(liftOffset, -0.3, 0.3);
+            robot.liftMotor.setPower(liftOffset);
+            //robot.liftServo.setPosition(robot.MID_SERVO + liftOffset);
             
             // Send telemetry message to signify robot running;
             telemetry.addData("claw",  "Offset = %.2f", clawOffset);
             telemetry.addData("relicClaw",  "Offset = %.2f", relicClawOffset);
             telemetry.addData("relicArm",  "Offset = %.2f", relicArmOffset);            
             telemetry.addData("liftOffset", "Offset=%.2f", liftOffset);
-            telemetry.addData("liftPosition", "liftPosition=%.2f", liftPosition);
-            telemetry.addData("liftTime=%.2f",liftElapsedTime.milliseconds());
+            telemetry.addData("liftPosition", "liftPosition=%d", robot.liftMotor.getCurrentPosition());
             telemetry.addData("left",  "%.2f", left);
             telemetry.addData("right", "%.2f", right);
             telemetry.update();
