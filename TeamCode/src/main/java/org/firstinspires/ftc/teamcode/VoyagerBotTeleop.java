@@ -58,17 +58,18 @@ import com.qualcomm.robotcore.util.ElapsedTime;
     HardwareVoyagerbot robot           = new HardwareVoyagerbot();   // Use a Pushbot's hardware
                                                                // could also use HardwarePushbotMatrix class.
     double          clawOffset      = 0;                       // Servo mid position
+    double          lowerClawOffset      = 0;                       // Servo mid position    
     final double    CLAW_SPEED      = 0.05 ;                   // sets rate to move servo
     double          liftOffset      = 0;
     double          liftPosition   = 0;
     double          relicOffset = 0;
     double          relicPosition = 0;
-    final double    RELIC_SPEED = 1.0;
+    final double    RELIC_SPEED = 2;
     final double    LIFT_SPEED      =1.0;
     private ElapsedTime liftElapsedTime = new ElapsedTime();
     int             liftTimeout     = 0;
     double          relicClawOffset = 0;
-    final double    RELIC_CLAW_SPEED = 0.02;
+    final double    RELIC_CLAW_SPEED = 0.01;
     double          relicArmOffset = 0;
     final double    RELIC_ARM_SPEED = 0.02;    
     private ElapsedTime runtime = new ElapsedTime();
@@ -109,6 +110,25 @@ import com.qualcomm.robotcore.util.ElapsedTime;
             robot.liftMotor.setPower(0);          
         }
     }
+    
+    public void doDropRelic() {
+        double desiredPosition = 0.78;
+        while (opModeIsActive() && robot.relicArm.getPosition() < desiredPosition) {
+            robot.relicArm.setPosition(robot.relicArm.getPosition() + RELIC_ARM_SPEED);
+            sleep(50);
+        }
+        robot.relicArm.setPosition(desiredPosition);
+        sleep(300);
+        
+        desiredPosition = 0.28;
+        while (opModeIsActive() && robot.relicClaw.getPosition() < desiredPosition) {
+            robot.relicClaw.setPosition(robot.relicClaw.getPosition() + RELIC_CLAW_SPEED);
+            sleep(100);
+        }
+        //robot.relicClaw.setPosition(desiredPosition);  
+        //sleep(500);
+    }
+    
     
     @Override
     public void runOpMode() {
@@ -158,8 +178,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
                 right /= max;
             }
             
-            left *= 0.7;
-            right *= 0.7;
+            left *= 0.9;
+            right *= 0.9;
 
             // Output the safe vales to the motor drives.
             robot.motorLeftFront.setPower(left);
@@ -169,39 +189,64 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 
             // use gamepad2 joystick to control relic extension
-            relicExtend  =  gamepad2.left_stick_x;
-            relicExtend = Range.clip(relicExtend, -0.3, 0.3);
-            robot.motorRelicLift.setPower(relicExtend);
+            /*relicExtend  =  gamepad2.left_stick_x;
+            relicExtend = Range.clip(relicExtend, -0.5, 0.5);
+            robot.motorRelicLift.setPower(relicExtend);*/
             
             // Use gamepad left & right Bumpers to open and close the claw
             if (gamepad2.right_bumper)
                 clawOffset += CLAW_SPEED;
             else if (gamepad2.left_bumper)
                 clawOffset -= CLAW_SPEED;
-               
+            /*else if (gamepad2.left_trigger>0.5)
+                lowerClawOffset += CLAW_SPEED;
+            else if (gamepad2.right_trigger>0.5)
+                lowerClawOffset -= CLAW_SPEED;  */   
+                
+            /*else if (gamepad2.x)
+                doDropRelic();*/
+            /*else if (gamepad2.b)
+                clawOffset -= CLAW_SPEED;*/
+                
             // Use gamepad dpad_left and dpad_right to open relic claw
-            if (gamepad2.dpad_down)
-                relicClawOffset += RELIC_CLAW_SPEED;
-            else if (gamepad2.dpad_up)
+           /* else if (gamepad2.dpad_down) {
                 relicClawOffset -= RELIC_CLAW_SPEED;
-            else if(gamepad2.dpad_left)
-                relicArmOffset += RELIC_ARM_SPEED;
-            else if(gamepad2.dpad_right)
+                relicClawOffset = Range.clip(relicClawOffset, 0, 0.95);
+                robot.relicClaw.setPosition(relicClawOffset);
+            } else if (gamepad2.dpad_up) {
+                relicClawOffset += RELIC_CLAW_SPEED;
+                relicClawOffset = Range.clip(relicClawOffset, 0, 0.95);
+                robot.relicClaw.setPosition(relicClawOffset);                
+            }else if(gamepad2.dpad_left) {
                 relicArmOffset -= RELIC_ARM_SPEED;
-            
+                relicArmOffset = Range.clip(relicArmOffset, 0.00, 0.95);
+                robot.relicArm.setPosition(relicArmOffset);
+            } else if(gamepad2.dpad_right) {
+                relicArmOffset += RELIC_ARM_SPEED;
+                relicArmOffset = Range.clip(relicArmOffset, 0.00, 0.95);
+                robot.relicArm.setPosition(relicArmOffset);                
+            }*/
             else if (gamepad1.left_bumper)
                 robot.backServo.setPosition(0.0);
             else if (gamepad1.right_bumper)
                 robot.backServo.setPosition(1.0);
                 
             else if (gamepad1.dpad_left)
-                encoderLift(0.8, 300, 4);
+                encoderLift(0.5, 500, 4);
             else if (gamepad1.dpad_right)
-                encoderLift(0.8, 600, 4);                
+                encoderLift(0.5, 600, 4);                
             else if (gamepad1.dpad_up)
-                encoderLift(0.8, 1300, 4);
+                encoderLift(0.6, 1493, 4);
             else if (gamepad1.dpad_down)
-                encoderLift(0.8, 0, 4);
+                encoderLift(0.5, 0, 4);
+                
+            if (gamepad1.y)
+                robot.liftMotor.setPower(robot.ARM_UP_POWER);
+            else if (gamepad1.a && robot.liftMotor.getCurrentPosition()>0)
+                robot.liftMotor.setPower(robot.ARM_DOWN_POWER);
+            else
+                robot.liftMotor.setPower(0.0);
+                
             /*    
             else if(gamepad2.dpad_up)
                 robot.motorRelicLift.setPower(-0.25);
@@ -211,31 +256,33 @@ import com.qualcomm.robotcore.util.ElapsedTime;
                 robot.motorRelicLift.setPower(0.25);*/
 
             // Move both servos to new position.  Assume servos are mirror image of each other.
-            clawOffset = Range.clip(clawOffset, -0.1, 0.1);
+            clawOffset = Range.clip(clawOffset, -0.12, 0.08);
             robot.leftClaw.setPosition(robot.MID_SERVO + clawOffset);
             robot.rightClaw.setPosition(robot.MID_SERVO - clawOffset);
-
-            relicClawOffset = Range.clip(relicClawOffset, 0, 0.86);
-            robot.relicClaw.setPosition(relicClawOffset);
             
-            relicArmOffset = Range.clip(relicArmOffset, 0.00, 0.8);
-            robot.relicArm.setPosition(relicArmOffset);
+            //lowerClawOffset = Range.clip(lowerClawOffset, -0.13, 0.13);
+            //robot.lowerLeftClaw.setPosition(robot.MID_SERVO + lowerClawOffset);
+            //robot.lowerRightClaw.setPosition(robot.MID_SERVO - lowerClawOffset);            
+
+
+            
+
             
             // increase of decrease speed of motors
             // how to do this, damp the power by a factor
 
              //Use gamepad buttons to move arm up (Y) and down (A)
-            if (gamepad2.y) {
+            /*if (gamepad2.y) {
                 liftOffset += LIFT_SPEED;
             } else if (gamepad2.a) {
                 liftOffset -= LIFT_SPEED;
             } else if (gamepad2.b) {
                 liftOffset=0.0;
-            }
+            }*/
 
-            robot.liftMotor.setPower(liftOffset);
+            /*robot.liftMotor.setPower(liftOffset);
             liftOffset = Range.clip(liftOffset, -0.3, 0.3);
-            robot.liftMotor.setPower(liftOffset);
+            robot.liftMotor.setPower(liftOffset);*/
             //robot.liftServo.setPosition(robot.MID_SERVO + liftOffset);
             
             // Send telemetry message to signify robot running;
