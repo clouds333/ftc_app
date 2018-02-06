@@ -30,6 +30,9 @@
 package org.firstinspires.ftc.teamcode;
 
 import android.app.Activity;
+import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
+import org.firstinspires.ftc.robotcore.external.navigation.Acceleration;
 import java.util.EnumSet;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -71,30 +74,12 @@ import java.util.Locale;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list.
  */
 @Autonomous(name = "Voyagerbot: Gyro Autonomous", group = "Sensor")
-//@Disabled                            // Comment this out to add to the opmode list
+@Disabled                            // Comment this out to add to the opmode list
 public class GyroAuto extends LinearOpMode {
 
-    /**
-     * Note that the REV Robotics Color-Distance incorporates two sensors into one device.
-     * It has a light/distance (range) sensor.  It also has an RGB color sensor.
-     * The light/distance sensor saturates at around 2" (5cm).  This means that targets that are 2"
-     * or closer will display the same value for distance/light detected.
-     *
-     * Although you configure a single REV Robotics Color-Distance sensor in your configuration file,
-     * you can treat the sensor as two separate sensors that share the same name in your op mode.
-     *
-     * In this example, we represent the detected color by a hue, saturation, and value color
-     * model (see https://en.wikipedia.org/wiki/HSL_and_HSV).  We change the background
-     * color of the screen to match the detected color.
-     *
-     * In this example, we  also use the distance sensor to display the distance
-     * to the target object.  Note that the distance sensor saturates at around 2" (5 cm).
-     *
-     */
-    ColorSensor sensorColor;
     DistanceSensor sensorDistance;
-    private boolean grabGlyph = true;
-    ModernRoboticsI2cGyro   gyro    = null;
+    BNO055IMU imu;
+
     HardwareVoyagerbot robot  = new HardwareVoyagerbot();   // Use a Pushbot's hardware
     private ElapsedTime runtime = new ElapsedTime();
 
@@ -104,11 +89,7 @@ public class GyroAuto extends LinearOpMode {
     static final double     COUNTS_PER_INCH         = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
                                                       (WHEEL_DIAMETER_INCHES * 3.1415);
 
-    static final double     TURN_SPEED              = 0.3;
-    static final double     FORWARD_SPEED           = 0.6;
-    static final double     DRIVE_SPEED             = 0.5;
-    static final double     FAST_SPEED              = 0.7;
-    static final double     SLOW_SPEED              = 0.15;
+    static final double     TURN_SPEED              = 0.4;
 
     
 
@@ -117,118 +98,6 @@ public class GyroAuto extends LinearOpMode {
     static final double     P_DRIVE_COEFF           = 0.15;     // Larger is more responsive, but also less stable
 
 
-    static final double     DRIVE_1_INCHES          = 3.0;
-    static final double     DRIVE_2_INCHES          = 20.0;
-    static final double     TURN_1_INCHES           = 14.0;
-    static final double     DRIVE_3_INCHES          = 10.0;
-    static final double     CRYPTO_BOX_INCHES       = 7.63;
-
-    public enum Orientation {
-       BLUE_1,
-       BLUE_2,
-       RED_1,
-       RED_2;
-       private static final int amount = EnumSet.allOf(Orientation.class).size();
-       private static Orientation[] val = new Orientation[amount];
-       static{ for(Orientation q:EnumSet.allOf(Orientation.class)){ val[q.ordinal()]=q; } }
-       public static Orientation fromInt(int i) { return val[i]; }
-       public Orientation next() { return fromInt((ordinal()+1)%amount); }
-    }
-
-    public Orientation startOrientation = Orientation.BLUE_1;
-    
-    public static final String TAG = "Vuforia VuMark Sample";
-
-    OpenGLMatrix lastLocation = null;
-
-    /**
-     * {@link #vuforia} is the variable we will use to store our instance of the Vuforia
-     * localization engine.
-     */
-    VuforiaLocalizer vuforia;
-    VuforiaTrackables relicTrackables = null;
-    VuforiaTrackable relicTemplate = null;
-    RelicRecoveryVuMark detectedVuMark = RelicRecoveryVuMark.UNKNOWN;
-    
-    public void initVuMark() {
-      /*
-       * To start up Vuforia, tell it the view that we wish to use for camera monitor (on the RC phone);
-       * If no camera monitor is desired, use the parameterless constructor instead (commented out below).
-       */
-      int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
-      VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters(cameraMonitorViewId);
-
-      // OR...  Do Not Activate the Camera Monitor View, to save power
-      // VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters();
-
-      /*
-       * IMPORTANT: You need to obtain your own license key to use Vuforia. The string below with which
-       * 'parameters.vuforiaLicenseKey' is initialized is for illustration only, and will not function.
-       * A Vuforia 'Development' license key, can be obtained free of charge from the Vuforia developer
-       * web site at https://developer.vuforia.com/license-manager.
-       *
-       * Vuforia license keys are always 380 characters long, and look as if they contain mostly
-       * random data. As an example, here is a example of a fragment of a valid key:
-       *      ... yIgIzTqZ4mWjk9wd3cZO9T1axEqzuhxoGlfOOI2dRzKS4T0hQ8kT ...
-       * Once you've obtained a license key, copy the string from the Vuforia web site
-       * and paste it in to your code onthe next line, between the double quotes.
-       */
-      parameters.vuforiaLicenseKey = "AThYzfT/////AAAAGckUHRIsekOBmxU6KcvbHqUrRkjaM/ix//1zO1TT5wcUh9w+0kjzOW4gAKMPqHRRb+r7GbuHMJyNqhWSAJCY6AFXpVYW+/t1q1pp4w9+OGmdh8eO7LIISlt+H+n3HCO851UHC/t2FtS3ZrAT9IbBAfccXObdXx4ZsgPAeK5NpeB2yoAbZmsaVi8IJDSsEznjLSP/zOGb4AxgMT4rpGBjy0784870zE93Dj0Dlt7laBcxZip5y1mRSI3Q2MJTKzJ2iHvJOwPT4T3fRUN8aOiDzHSz5YEkHtS7kzX2EWlu4ENk7E7NlXDaELabIsY1KRTEaeoD4xFNNYCbBiRV7ydwGkiwSu6V9hfDLEuWax9/GPYo";
-
-      /*
-       * We also indicate which camera on the RC that we wish to use.
-       * Here we chose the back (HiRes) camera (for greater range), but
-       * for a competition robot, the front camera might be more convenient.
-       */
-      parameters.cameraDirection = VuforiaLocalizer.CameraDirection.BACK;
-      this.vuforia = ClassFactory.createVuforiaLocalizer(parameters);
-      /**
-       * Load the data set containing the VuMarks for Relic Recovery. There's only one trackable
-       * in this data set: all three of the VuMarks in the game were created from this one template,
-       * but differ in their instance id information.
-       * @see VuMarkInstanceId
-       */
-      relicTrackables = this.vuforia.loadTrackablesFromAsset("RelicVuMark");
-      relicTemplate = relicTrackables.get(0);
-      relicTemplate.setName("relicVuMarkTemplate"); // can help in debugging; otherwise not necessary
-    }
-
-    public RelicRecoveryVuMark detectVuMark() {
-
-    
-      relicTrackables.activate();
-
-      // reset the timeout
-      if (opModeIsActive()) {
-          runtime.reset();
-          while (opModeIsActive()  && (runtime.seconds() < 2.0)) {
-                /**
-                 * See if any of the instances of {@link relicTemplate} are currently visible.
-                 * {@link RelicRecoveryVuMark} is an enum which can have the following values:
-                 * UNKNOWN, LEFT, CENTER, and RIGHT. When a VuMark is visible, something other than
-                 * UNKNOWN will be returned by {@link RelicRecoveryVuMark#from(VuforiaTrackable)}.
-                 */
-                RelicRecoveryVuMark vuMark = RelicRecoveryVuMark.from(relicTemplate);
-                if (vuMark != RelicRecoveryVuMark.UNKNOWN) {
-        
-                    /* Found an instance of the template. In the actual game, you will probably
-                     * loop until this condition occurs, then move on to act accordingly depending
-                     * on which VuMark was visible. */
-                    telemetry.addData("VuMark", "%s visible", vuMark);
-        
-                    return vuMark;
-                }
-                else {
-                    telemetry.addData("VuMark", "not visible");
-                }
-        
-                telemetry.update();
-          }
-      }
-      return RelicRecoveryVuMark.UNKNOWN;
-    }
-    
-    
     public void initRobot() {
 
         /*
@@ -258,221 +127,29 @@ public class GyroAuto extends LinearOpMode {
 
     }
 
-    /*
-     *  Method to perfmorm a relative move, based on encoder counts.
-     *  Encoders are not reset as the move is based on the current position.
-     *  Move will stop if any of three conditions occur:
-     *  1) Move gets to the desired position
-     *  2) Move runs out of time
-     *  3) Driver stops the opmode running.
-     */
-    public void encoderDrive(double speed,
-                             double leftInches1, double leftInches2, double rightInches1, double rightInches2,
-                             double timeoutS) {
-        int newLeftTarget1;
-        int newLeftTarget2;
-        int newRightTarget1;
-        int newRightTarget2;
-
-        // Ensure that the opmode is still active
-        if (opModeIsActive()) {
-
-            // Determine new target position, and pass to motor controller
-            newLeftTarget1 = robot.motorLeftFront.getCurrentPosition() + (int)(leftInches1 * COUNTS_PER_INCH);
-            newLeftTarget2 = robot.motorLeftBack.getCurrentPosition() + (int)(leftInches2 * COUNTS_PER_INCH);
-            newRightTarget1 = robot.motorRightFront.getCurrentPosition() + (int)(rightInches1 * COUNTS_PER_INCH);
-            newRightTarget2 = robot.motorRightBack.getCurrentPosition() + (int)(rightInches2 * COUNTS_PER_INCH);
-            
-            robot.motorLeftFront.setTargetPosition(newLeftTarget1);
-            robot.motorLeftBack.setTargetPosition(newLeftTarget2);
-            robot.motorRightFront.setTargetPosition(newRightTarget1);
-            robot.motorRightBack.setTargetPosition(newRightTarget2);
-
-            // Turn On RUN_TO_POSITION
-            robot.motorLeftFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            robot.motorLeftBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            robot.motorRightFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            robot.motorRightBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-            // reset the timeout time and start motion.
-            runtime.reset();
-            robot.motorLeftFront.setPower(Math.abs(speed));
-            robot.motorLeftBack.setPower(Math.abs(speed));
-            robot.motorRightFront.setPower(Math.abs(speed));
-            robot.motorRightBack.setPower(Math.abs(speed));
-
-            // keep looping while we are still active, and there is time left, and both motors are running.
-            // Note: We use (isBusy() && isBusy()) in the loop test, which means that when EITHER motor hits
-            // its target position, the motion will stop.  This is "safer" in the event that the robot will
-            // always end the motion as soon as possible.
-            // However, if you require that BOTH motors have finished their moves before the robot continues
-            // onto the next step, use (isBusy() || isBusy()) in the loop test.
-            while (opModeIsActive() &&
-                   (runtime.seconds() < timeoutS) &&
-                   (robot.motorLeftFront.isBusy() && robot.motorRightFront.isBusy()
-                   && robot.motorLeftBack.isBusy() && robot.motorRightBack.isBusy()
-                   )) {
-
-                // Display it for the driver.
-                telemetry.addData("Path1",  "Running to %7d %7d, %7d %7d", newLeftTarget1,  newLeftTarget2, newRightTarget1, newRightTarget2);
-                telemetry.addData("Path2",  "Running at %7d :%7d %7d %7d",
-                                            robot.motorLeftFront.getCurrentPosition(),
-                                            robot.motorLeftBack.getCurrentPosition(),
-                                            robot.motorRightFront.getCurrentPosition(),
-                                            robot.motorRightBack.getCurrentPosition());
-                telemetry.update();
-            }
-
-            // Stop all motion;
-            robot.motorLeftFront.setPower(0);
-            robot.motorLeftBack.setPower(0);
-            robot.motorRightFront.setPower(0);
-            robot.motorRightBack.setPower(0);
-
-            // Turn off RUN_TO_POSITION
-            robot.motorLeftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            robot.motorLeftBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            robot.motorRightFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            robot.motorRightBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
-            sleep(250);   // optional pause after each move
-        }
-    }
     
-    public void doGrabGlyph(boolean isClose) {
-        double clawOffset = 0;
-
-        if (isClose) {
-            clawOffset = 0.2;
-        } else {
-            clawOffset = -0.2;
-        }
-        robot.leftClaw.setPosition(robot.MID_SERVO + clawOffset);
-        robot.rightClaw.setPosition(robot.MID_SERVO - clawOffset);
-        sleep (300);
-
-    }
+    public void initGyro() {
+        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+        parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
+        parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+        parameters.calibrationDataFile = "BNO055IMUCalibration.json"; // see the calibration sample opmode
+        parameters.loggingEnabled = true;
+        parameters.loggingTag = "IMU";
+        parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
     
-    public void doLift() {
-        double liftOffset = 0.5;       
-        robot.liftServo.setPosition(robot.MID_SERVO + liftOffset);
-        sleep(1000);
-        robot.liftServo.setPosition(robot.MID_SERVO);  
-        sleep(50);
-    }
+        // Send telemetry message to alert driver that we are calibrating;
 
-    public void init_loop2() {
-        // read the gamepad
-        if (gamepad1.right_bumper) {
-          // switch the Orientation
-          startOrientation = startOrientation.next();
-
-        }
-        RelicRecoveryVuMark vuMark = RelicRecoveryVuMark.from(relicTemplate);
-        if (vuMark != RelicRecoveryVuMark.UNKNOWN) {
-            /* Found an instance of the template. In the actual game, you will probably
-             * loop until this condition occurs, then move on to act accordingly depending
-             * on which VuMark was visible. */
-             detectedVuMark = vuMark;
-            telemetry.addData("VuMark", "%s visible", vuMark);
-        }
-        telemetry.addData("Selected Orientation: ", startOrientation);
-        telemetry.addData("VuMark Found: ", vuMark);
+        // Retrieve and initialize the IMU. We expect the IMU to be attached to an I2C port
+        // on a Core Device Interface Module, configured to be a sensor of type "AdaFruit IMU",
+        // and named "imu".
+        telemetry.addData(">", "Calibrating Gyro");    //        
+        telemetry.update();
+        imu = hardwareMap.get(BNO055IMU.class, "imu");
+        imu.initialize(parameters);
+        telemetry.addData(">", "Finish Calibrating Gyro");    //
         telemetry.update();
     }
     
-
-    public void knockOffJewel(boolean redDetected, Orientation orientation) {
-        if (orientation == Orientation.BLUE_1 || orientation == Orientation.BLUE_2) {
-          if (redDetected) {
-            // we are blue, red detected, go backward and knockOffJewel
-            gyroDrive(SLOW_SPEED, 1.5, 0.0); // go backwards to knock jewel off
-            robot.colorServo.setPosition(0.0); //lift arm back up
-            sleep(500);
-            gyroDrive(SLOW_SPEED, -3.5, 0.0); // go to original position
-          } else {
-            // we are blue and blue detected, go forward to knockOffJewel
-            gyroDrive(SLOW_SPEED, -2, 0.0); // go backwards to knock jewel off
-            robot.colorServo.setPosition(0.0); //lift arm back up
-            sleep(500);
-          }
-        } else {
-          // must be red alliance
-          if (redDetected) {
-            gyroDrive(SLOW_SPEED, -2, 0.0); // go backwards to knock jewel off
-            robot.colorServo.setPosition(0.0); //lift arm back up
-            sleep(500);
-            gyroDrive(SLOW_SPEED, 3.4, 0.0); // go to original position
-          } else {
-            gyroDrive(SLOW_SPEED, 2, 0.0); // go forwards to knock jewel off
-            robot.colorServo.setPosition(0.0); //lift arm back up
-            sleep(500);
-          }
-        }
-    }
-
-    public void driveToCryptoBox(Orientation orientation, RelicRecoveryVuMark vuMark) {
-        double cryptoOffset = 0.0;
-        if (vuMark == RelicRecoveryVuMark.CENTER) {
-            cryptoOffset = CRYPTO_BOX_INCHES;
-        } else if (vuMark == RelicRecoveryVuMark.RIGHT) {
-            cryptoOffset = 2 * CRYPTO_BOX_INCHES;
-        }
-
-        if (orientation == Orientation.BLUE_1) {
-          double bd = -8;
-          bd = bd - cryptoOffset;
-          gyroDrive(SLOW_SPEED, -22, 0.0); // go backwards
-          gyroDrive(SLOW_SPEED, bd, 0.0); // go forwards    
-          encoderDrive(TURN_SPEED, 14, 14, -14, -14, 3.0); // turn right
-          gyroDrive(DRIVE_SPEED, 10, 0.0); // go forwards
-          doGrabGlyph(false);
-          gyroDrive(SLOW_SPEED, 2, 0.0); // go forwards
-        } else if (orientation == Orientation.BLUE_2) {
-          double bd = 45;
-          gyroDrive(SLOW_SPEED, -26, 0.0); // go backwards
-          if (vuMark == RelicRecoveryVuMark.CENTER) {
-            encoderDrive(TURN_SPEED, bd + 3, bd + 3, -bd - 3, -bd - 3, 3.0); // turn left              
-          } else if (vuMark == RelicRecoveryVuMark.RIGHT) {
-            encoderDrive(TURN_SPEED, bd + 8, bd +8 , -bd - 8, -bd - 8, 3.0); // turn left     
-          } else {
-             encoderDrive(TURN_SPEED, bd, bd, -bd, -bd, 3.0); // 180                
-          }
-          gyroDrive(SLOW_SPEED, 6, 0.0); // go forwards
-          doGrabGlyph(false);
-          gyroDrive(SLOW_SPEED, 2, 0.0); // go forwards
-        } else if (orientation == Orientation.RED_1) {
-          double bd = 2;
-          bd = bd + cryptoOffset;
-          gyroDrive(SLOW_SPEED, 19.6, 0.0); // go forwards
-          gyroDrive(SLOW_SPEED, bd, 0.0); // go forwards          
-          encoderDrive(TURN_SPEED, 16.44, 16.44, -16.44, -16.44, 3.0); // turn right
-          gyroDrive(DRIVE_SPEED, 10, 0.0); // go forwards
-          doGrabGlyph(false);
-          gyroDrive(SLOW_SPEED, 2, 0.0); // go forwards
-          gyroDrive(DRIVE_SPEED, -5, 0.0); // backwards
-
-        } else if (orientation == Orientation.RED_2) {
-          gyroDrive(SLOW_SPEED, 25, 0.0); // go forwards
-          if (vuMark == RelicRecoveryVuMark.RIGHT) {
-          encoderDrive(TURN_SPEED, -3.5, -3.5, 3.5, 3.5, 3.0); // turn left              
-          } else if (vuMark == RelicRecoveryVuMark.LEFT) {
-            encoderDrive(TURN_SPEED, -11, -11, 11, 11,3.0);// turn left
-          } else if (vuMark == RelicRecoveryVuMark.CENTER) {
-            encoderDrive(TURN_SPEED, -5.5, -5.5, 5.5, 5.5, 3.0);
-          }
-          gyroDrive(SLOW_SPEED, 11, 0.0); // go forwards
-          encoderDrive(TURN_SPEED, 3.5, 3.5, -3.5, -3.5, 3.0);
-          
-              
-          //encoderDrive(TURN_SPEED, 15, 15, -15, 15, 3.0); // turn left
-          //encoderDrive(DRIVE_SPEED, 12 + cryptoOffset, 12 + cryptoOffset, 12+cryptoOffset, 12+cryptoOffset, 3.0); // go forwards
-          //encoderDrive(TURN_SPEED, -13, -13, 13, 13, 3.0); // turn left
-          doGrabGlyph(false);
-          gyroDrive(SLOW_SPEED, 4.5, 0.0); // go forwards
-          gyroDrive(DRIVE_SPEED, -5, 0.0); // backwards
-        }
-    }
     public void runOpMode() {
 
         /*
@@ -480,50 +157,32 @@ public class GyroAuto extends LinearOpMode {
          * The init() method of the hardware class does most of the work here
          */
         robot.init(hardwareMap, true);
-        gyro = (ModernRoboticsI2cGyro)hardwareMap.gyroSensor.get("gyro");
-
-        // Ensure the robot it stationary, then reset the encoders and calibrate the gyro.
-        robot.motorLeftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        robot.motorLeftBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        robot.motorRightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        robot.motorRightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
-        // Send telemetry message to alert driver that we are calibrating;
-        telemetry.addData(">", "Calibrating Gyro");    //
-        telemetry.update();
-
-        gyro.calibrate();
-
-        // make sure the gyro is calibrated before continuing
-        while (!isStopRequested() && gyro.isCalibrating())  {
-            sleep(50);
-            idle();
-        }
+        initRobot();
+        initGyro();
 
         telemetry.addData(">", "Robot Ready.");    //
         telemetry.update();
 
-        robot.motorLeftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        robot.motorLeftBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        robot.motorRightFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        robot.motorRightBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
         // Wait for the game to start (Display Gyro value), and reset gyro before we move..
         while (!isStarted()) {
-            telemetry.addData(">", "Robot Heading = %d", gyro.getIntegratedZValue());
+            //telemetry.addData(">", "Robot Heading = %d", gyro.getIntegratedZValue());
             telemetry.update();
         }
 
-        gyro.resetZAxisIntegrator();
+        //gyro.resetZAxisIntegrator();
 
         // Step through each leg of the path,
         // Note: Reverse movement is obtained by setting a negative distance (not speed)
         // Put a hold after each turn
-       /* gyroDrive(DRIVE_SPEED, 48.0, 0.0);    // Drive FWD 48 inches
-        gyroTurn( TURN_SPEED, -45.0);         // Turn  CCW to -45 Degrees
+        //gyroDrive(DRIVE_SPEED, 10.0, 0.0);    // Drive FWD 48 inches
+        gyroTurn( TURN_SPEED, -90.0);         // Turn  CCW to -45 Degrees
+        initGyro();
+        sleep(500);
+        gyroTurn( TURN_SPEED, -180.0);
+        /*    
         gyroHold( TURN_SPEED, -45.0, 0.5);    // Hold -45 Deg heading for a 1/2 second
         gyroDrive(DRIVE_SPEED, 12.0, -45.0);  // Drive FWD 12 inches at 45 degrees
-        gyroTurn( TURN_SPEED,  45.0);         // Turn  CW  to  45 Degrees
+        gyroTurn( TURN_SPEED,  90.0);         // Turn  CW  to  90 Degrees
         gyroHold( TURN_SPEED,  45.0, 0.5);    // Hold  45 Deg heading for a 1/2 second
         gyroTurn( TURN_SPEED,   0.0);         // Turn  CW  to   0 Degrees
         gyroHold( TURN_SPEED,   0.0, 1.0);    // Hold  0 Deg heading for a 1 second
@@ -757,10 +416,10 @@ public class GyroAuto extends LinearOpMode {
      */
     public double getError(double targetAngle) {
 
-        double robotError;
+        double robotError = 0.0;
 
         // calculate error in -179 to +180 range  (
-        robotError = targetAngle - gyro.getIntegratedZValue();
+        robotError = targetAngle - imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle;
         while (robotError > 180)  robotError -= 360;
         while (robotError <= -180) robotError += 360;
         return robotError;
