@@ -70,8 +70,8 @@ import java.util.Locale;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list.
  */
 @Autonomous(name = "Voyagerbot: Autonomous", group = "Sensor")
-//@Disabled                            // Comment this out to add to the opmode list
-public class VoyagerBotAuto extends LinearOpMode {
+@Disabled                            // Comment this out to add to the opmode list
+public class VoyagerBotAuto extends VoyagerBotAutoTest {
 
     /**
      * Note that the REV Robotics Color-Distance incorporates two sensors into one device.
@@ -93,7 +93,7 @@ public class VoyagerBotAuto extends LinearOpMode {
     ColorSensor sensorColor;
     DistanceSensor sensorDistance;
     private boolean grabGlyph = true;
-    HardwareVoyagerbot robot  = new HardwareVoyagerbot();   // Use a Pushbot's hardware
+    //HardwareVoyagerbot robot  = new HardwareVoyagerbot();   // Use a Pushbot's hardware
     private ElapsedTime runtime = new ElapsedTime();
 
     static final double     COUNTS_PER_MOTOR_REV    = 1120 ;    // eg: TETRIX Motor Encoder
@@ -220,6 +220,9 @@ public class VoyagerBotAuto extends LinearOpMode {
       return defaultLocation;
     }
     
+    public void initOrientation() {
+      startOrientation = Orientation.BLUE_1;
+    }
     
     public void initRobot() {
 
@@ -250,86 +253,6 @@ public class VoyagerBotAuto extends LinearOpMode {
 
     }
 
-    /*
-     *  Method to perfmorm a relative move, based on encoder counts.
-     *  Encoders are not reset as the move is based on the current position.
-     *  Move will stop if any of three conditions occur:
-     *  1) Move gets to the desired position
-     *  2) Move runs out of time
-     *  3) Driver stops the opmode running.
-     */
-    public void encoderDrive(double speed,
-                             double leftInches1, double leftInches2, double rightInches1, double rightInches2,
-                             double timeoutS) {
-        int newLeftTarget1;
-        int newLeftTarget2;
-        int newRightTarget1;
-        int newRightTarget2;
-
-        // Ensure that the opmode is still active
-        if (opModeIsActive()) {
-
-            // Determine new target position, and pass to motor controller
-            newLeftTarget1 = robot.motorLeftFront.getCurrentPosition() + (int)(leftInches1 * COUNTS_PER_INCH);
-            newLeftTarget2 = robot.motorLeftBack.getCurrentPosition() + (int)(leftInches2 * COUNTS_PER_INCH);
-            newRightTarget1 = robot.motorRightFront.getCurrentPosition() + (int)(rightInches1 * COUNTS_PER_INCH);
-            newRightTarget2 = robot.motorRightBack.getCurrentPosition() + (int)(rightInches2 * COUNTS_PER_INCH);
-            
-            robot.motorLeftFront.setTargetPosition(newLeftTarget1);
-            robot.motorLeftBack.setTargetPosition(newLeftTarget2);
-            robot.motorRightFront.setTargetPosition(newRightTarget1);
-            robot.motorRightBack.setTargetPosition(newRightTarget2);
-
-            // Turn On RUN_TO_POSITION
-            robot.motorLeftFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            robot.motorLeftBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            robot.motorRightFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            robot.motorRightBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-            // reset the timeout time and start motion.
-            runtime.reset();
-            robot.motorLeftFront.setPower(Math.abs(speed));
-            robot.motorLeftBack.setPower(Math.abs(speed));
-            robot.motorRightFront.setPower(Math.abs(speed));
-            robot.motorRightBack.setPower(Math.abs(speed));
-
-            // keep looping while we are still active, and there is time left, and both motors are running.
-            // Note: We use (isBusy() && isBusy()) in the loop test, which means that when EITHER motor hits
-            // its target position, the motion will stop.  This is "safer" in the event that the robot will
-            // always end the motion as soon as possible.
-            // However, if you require that BOTH motors have finished their moves before the robot continues
-            // onto the next step, use (isBusy() || isBusy()) in the loop test.
-            while (opModeIsActive() &&
-                   (runtime.seconds() < timeoutS) &&
-                   (robot.motorLeftFront.isBusy() && robot.motorRightFront.isBusy()
-                   && robot.motorLeftBack.isBusy() && robot.motorRightBack.isBusy()
-                   )) {
-
-                // Display it for the driver.
-                telemetry.addData("Path1",  "Running to %7d %7d, %7d %7d", newLeftTarget1,  newLeftTarget2, newRightTarget1, newRightTarget2);
-                telemetry.addData("Path2",  "Running at %7d :%7d %7d %7d",
-                                            robot.motorLeftFront.getCurrentPosition(),
-                                            robot.motorLeftBack.getCurrentPosition(),
-                                            robot.motorRightFront.getCurrentPosition(),
-                                            robot.motorRightBack.getCurrentPosition());
-                telemetry.update();
-            }
-
-            // Stop all motion;
-            robot.motorLeftFront.setPower(0);
-            robot.motorLeftBack.setPower(0);
-            robot.motorRightFront.setPower(0);
-            robot.motorRightBack.setPower(0);
-
-            // Turn off RUN_TO_POSITION
-            robot.motorLeftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            robot.motorLeftBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            robot.motorRightFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            robot.motorRightBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
-            sleep(250);   // optional pause after each move
-        }
-    }
     
     public void doGrabGlyph(boolean isClose) {
         double clawOffset = 0;
@@ -339,26 +262,14 @@ public class VoyagerBotAuto extends LinearOpMode {
         } else {
             clawOffset = 0.2;
         }
+        clawOffset = Range.clip(clawOffset, -0.12, 0.08);
         robot.leftClaw.setPosition(robot.MID_SERVO + clawOffset);
         robot.rightClaw.setPosition(robot.MID_SERVO - clawOffset);
         sleep (300);
 
     }
     
-    public void doLift() {
-        /*double liftOffset = 0.5;       
-        robot.liftServo.setPosition(robot.MID_SERVO + liftOffset);
-        sleep(1000);
-        robot.liftServo.setPosition(robot.MID_SERVO);  
-        sleep(50);*/
-        robot.liftMotor.setPower(0.5);
-        runtime.reset();
-        while (opModeIsActive() && (runtime.seconds() < 0.7)) {
-            telemetry.addData("Path", "Leg 1: %2.5f S Elapsed", runtime.seconds());
-            telemetry.update();
-        }
-        robot.liftMotor.setPower(0.0);
-    }
+
 
     public void init_loop2() {
         // read the gamepad
@@ -409,13 +320,19 @@ public class VoyagerBotAuto extends LinearOpMode {
         int relativeLayoutId = hardwareMap.appContext.getResources().getIdentifier("RelativeLayout", "id", hardwareMap.appContext.getPackageName());
         final View relativeLayout = ((Activity) hardwareMap.appContext).findViewById(relativeLayoutId);
 
+        initOrientation();
         initRobot();
         initVuMark();
+        initGyro();
         robot.colorServo.setPosition(0.0);
+       // robot.leftArm.setPosition();
+        
         relicTrackables.activate();
         
         // wait for the start button to be pressed.
         //waitForStart();
+        AutoTransitioner.transitionOnStop(this, "VoyagerBotTeleop");
+        // AutoTransitioner used before waitForStart()
         while (!opModeIsActive() ) {
            init_loop2();
            // waitOneFullHardwareCycle();
@@ -424,16 +341,14 @@ public class VoyagerBotAuto extends LinearOpMode {
         
         // loop and read the RGB and distance data.
         // Note we use opModeIsActive() as our loop condition because it is an interruptible method.
+        doGrabGlyph(false);
+        encoderLift(0.6, 500, 1);  
+        runtime.reset();
         while (opModeIsActive()) {
 
-                    
-            if (grabGlyph) {
-                doGrabGlyph(true);
-                doLift();
-                grabGlyph = false;
-            }        
-            
             if (isJewelNotDetected) {
+                telemetry.addData("moving colorServo %s", "");
+                telemetry.update();              
                 robot.colorServo.setPosition(1.0);
                 sleep(1000);
             }
@@ -449,16 +364,19 @@ public class VoyagerBotAuto extends LinearOpMode {
                 redValue = sensorColor.red();
                 blueValue = sensorColor.blue();                
                 //Red
-                if (redValue > blueValue * 1.5) { 
+                if (redValue > blueValue * 1.2) { 
                     isJewelNotDetected = false;
-                    knockOffJewel(true, startOrientation);
-                    driveToCryptoBox(startOrientation, detectedVuMark);                    
+                    int direction = knockOffJewel(true, startOrientation);
+                    driveToCryptoBox(startOrientation, detectedVuMark, direction);                    
                 
-                } else if (blueValue > redValue * 1.5) {
+                } else if (blueValue > redValue * 1.2) {
                 //Blue    
                     isJewelNotDetected = false;
-                    knockOffJewel(false, startOrientation);
-                    driveToCryptoBox(startOrientation, detectedVuMark);
+                    int direction = knockOffJewel(false, startOrientation);
+                    driveToCryptoBox(startOrientation, detectedVuMark, direction);
+                /*} else if (runtime.seconds() > 2) {
+                // we did not detect anything, just go
+                    driveToCryptoBox(startOrientation, detectedVuMark, 0);*/                  
                 } else {
                     telemetry.addData("No color jewel detected", redValue);
                     telemetry.update();
@@ -468,36 +386,71 @@ public class VoyagerBotAuto extends LinearOpMode {
 
     }
     
-    public void knockOffJewel(boolean redDetected, Orientation orientation) {
+    // return 0 if forward, 1 if backward
+    public int knockOffJewel(boolean redDetected, Orientation orientation) {
         if (orientation == Orientation.BLUE_1 || orientation == Orientation.BLUE_2) {
           if (redDetected) {
             // we are blue, red detected, go backward and knockOffJewel
-            encoderDrive(SLOW_SPEED, 1.5, 1.5, 1.5, 1.5, 1.0); // go backwards to knock jewel off
+            encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 2); // go backwards to knock jewel off
             robot.colorServo.setPosition(0.0); //lift arm back up
-            sleep(500);
+            sleep(1000);
             encoderDrive(SLOW_SPEED, -3.5, -3.5, -3.5, -3.5, 1.0); // go to original position
-          } else {
+            return 1;
+          } else{
             // we are blue and blue detected, go forward to knockOffJewel
-            encoderDrive(SLOW_SPEED, -2, -2, -2, -2, 1.0); // go backwards to knock jewel off
+            encoderDrive(SLOW_SPEED, -3, -3, -3, -3, 2); // go backwards to knock jewel off
             robot.colorServo.setPosition(0.0); //lift arm back up
-            sleep(500);
+            sleep(1000);
+            return 0;
           }
         } else {
           // must be red alliance
           if (redDetected) {
-            encoderDrive(SLOW_SPEED, -2, -2, -2, -2, 1.0); // go backwards to knock jewel off
+            encoderDrive(SLOW_SPEED, -2, -2, -2, -2, 1.5); // go backwards to knock jewel off
             robot.colorServo.setPosition(0.0); //lift arm back up
-            sleep(500);
+            sleep(1000);
             encoderDrive(SLOW_SPEED, 3, 3, 3, 3, 1.0); // go to original position
+            return 1;
           } else {
-            encoderDrive(SLOW_SPEED, 2.5, 2.5, 2.5, 2.5, 1.0); // go forwards to knock jewel off
+            encoderDrive(SLOW_SPEED, 3, 3, 3, 3, 1.0); // go forwards to knock jewel off
             robot.colorServo.setPosition(0.0); //lift arm back up
-            sleep(500);
+            sleep(1000);
+            return 0;
           }
         }
     }
 
-    public void driveToCryptoBox(Orientation orientation, RelicRecoveryVuMark vuMark) {
+    public void driveToCryptoBox(Orientation orientation, RelicRecoveryVuMark vuMark, int direction) {
+        double cryptoOffset = 0;
+        if (orientation == Orientation.BLUE_1 || orientation == Orientation.BLUE_2 ) {
+          if (vuMark == RelicRecoveryVuMark.CENTER || vuMark == RelicRecoveryVuMark.UNKNOWN) {
+              cryptoOffset = CRYPTO_BOX_INCHES;
+          } else if (vuMark == RelicRecoveryVuMark.LEFT ) {
+              cryptoOffset = 2 * CRYPTO_BOX_INCHES;
+          }              
+        } else {
+          if (vuMark == RelicRecoveryVuMark.CENTER || vuMark == RelicRecoveryVuMark.UNKNOWN) {
+              cryptoOffset = CRYPTO_BOX_INCHES;
+          } else if (vuMark == RelicRecoveryVuMark.RIGHT) {
+              cryptoOffset = 2 * CRYPTO_BOX_INCHES;
+          }              
+        }
+        if (orientation == Orientation.BLUE_1) {
+          blue_1_forward_internal(false, -5.0 - cryptoOffset, direction);
+        } else if (orientation == Orientation.BLUE_2) { 
+          blue_2_forward_internal(false, 2 + cryptoOffset, direction);          
+        } else if (orientation == Orientation.RED_1) {
+          red_1_forward_internal(false, 6.5 + cryptoOffset, direction);
+        } else if (orientation == Orientation.RED_2) {    
+          red_2_forward_internal(false, 5 + cryptoOffset, direction);          
+        }
+        // reset lift to lower position
+        //doGrabGlyph(false);
+        sleep(200);
+        encoderLift(0.5, 0, 1);
+    }  
+    
+    public void driveToCryptoBox2(Orientation orientation, RelicRecoveryVuMark vuMark) {
         double cryptoOffset = 0.0;
         if (vuMark == RelicRecoveryVuMark.CENTER) {
             cryptoOffset = CRYPTO_BOX_INCHES;
