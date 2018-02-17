@@ -102,16 +102,12 @@ public class VoyagerBotAuto extends VoyagerBotAutoTest {
     static final double     COUNTS_PER_INCH         = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
                                                       (WHEEL_DIAMETER_INCHES * 3.1415);
 
-    static final double     TURN_SPEED              = 0.3;
-    static final double     FORWARD_SPEED           = 0.6;
-    static final double     DRIVE_SPEED             = 0.5;
-    static final double     FAST_SPEED              = 0.7;
-    static final double     SLOW_SPEED              = 0.10;
-
-    static final double     DRIVE_1_INCHES          = 3.0;
-    static final double     DRIVE_2_INCHES          = 20.0;
-    static final double     TURN_1_INCHES           = 14.0;
-    static final double     DRIVE_3_INCHES          = 10.0;
+    //static final double     TURN_SPEED              = 0.3;
+    //static final double     FORWARD_SPEED           = 0.6;
+    //static final double     DRIVE_SPEED             = 0.5;
+    //static final double     FAST_SPEED              = 0.7;
+    //static final double     SLOW_SPEED              = 0.10;
+    static double COLOR_SERVO_SPEED = 0.05;
     static final double     CRYPTO_BOX_INCHES       = 7.63;
 
     public enum Orientation {
@@ -141,6 +137,7 @@ public class VoyagerBotAuto extends VoyagerBotAutoTest {
     VuforiaTrackable relicTemplate = null;
     RelicRecoveryVuMark detectedVuMark = RelicRecoveryVuMark.UNKNOWN;
     RelicRecoveryVuMark defaultLocation = RelicRecoveryVuMark.RIGHT;  // default to this if unknown
+    boolean grabSecond = false;
     
     public void initVuMark() {
       /*
@@ -333,7 +330,7 @@ public class VoyagerBotAuto extends VoyagerBotAutoTest {
         //waitForStart();
         AutoTransitioner.transitionOnStop(this, "VoyagerBotTeleop");
         // AutoTransitioner used before waitForStart()
-        while (!opModeIsActive() ) {
+        while (!opModeIsActive() && !isStopRequested()) {
            init_loop2();
            // waitOneFullHardwareCycle();
            sleep(50); // temporary fix to waitXXXHardwareCycle bug?
@@ -341,19 +338,21 @@ public class VoyagerBotAuto extends VoyagerBotAutoTest {
         
         // loop and read the RGB and distance data.
         // Note we use opModeIsActive() as our loop condition because it is an interruptible method.
-        doGrabGlyph(false);
-        encoderLift(0.6, 500, 1);  
+
         runtime.reset();
         while (opModeIsActive()) {
-
             if (isJewelNotDetected) {
                 telemetry.addData("moving colorServo %s", "");
-                telemetry.update();              
-                robot.colorServo.setPosition(1.0);
-                sleep(1000);
+                telemetry.update();     
+                //moveColorServo(1);
+                robot.colorServo.setPosition(1.0);                
+                doGrabGlyph(false);
+                encoderLift(0.7, 300, 1);  
+                //sleep(1000);
             }
 
-            if (isJewelNotDetected == true) {
+            ElapsedTime colorDetectTime = new ElapsedTime();
+            while (opModeIsActive() && isJewelNotDetected == true && colorDetectTime.seconds() <= 2) {
                 // convert the RGB values to HSV values.
                 // multiply by the SCALE_FACTOR.
                 // then cast it back to int (SCALE_FACTOR is a double)
@@ -382,8 +381,40 @@ public class VoyagerBotAuto extends VoyagerBotAutoTest {
                     telemetry.update();
                 }
             }
+            if (isJewelNotDetected == true) {
+                isJewelNotDetected = false;   
+                noJewel(startOrientation);
+                driveToCryptoBox(startOrientation, detectedVuMark, 0);                  
+            }
+            
         }
 
+    }
+    
+    public void moveColorServo(int desiredPosition){
+        if (desiredPosition == 1) {
+            while (opModeIsActive() && robot.colorServo.getPosition() < desiredPosition) {
+                robot.colorServo.setPosition(robot.colorServo.getPosition() + COLOR_SERVO_SPEED);
+                sleep(50);
+            }
+        } else {
+            while (opModeIsActive() && robot.colorServo.getPosition() > desiredPosition) {
+                robot.colorServo.setPosition(robot.colorServo.getPosition() - COLOR_SERVO_SPEED);
+                sleep(50);
+            }            
+        }
+        robot.colorServo.setPosition(desiredPosition);
+        sleep(300);
+    }
+    
+    public void noJewel(Orientation orientation) {
+        if (orientation == Orientation.BLUE_1 || orientation == Orientation.BLUE_2) {   
+            moveColorServo(0);
+            encoderDrive(SLOW_SPEED, -3, -3, 2);
+        } else {
+            moveColorServo(0);                
+            encoderDrive(SLOW_SPEED, 3, 3, 1.5); // go forwards to knock jewel off
+        }
     }
     
     // return 0 if forward, 1 if backward
@@ -391,30 +422,34 @@ public class VoyagerBotAuto extends VoyagerBotAutoTest {
         if (orientation == Orientation.BLUE_1 || orientation == Orientation.BLUE_2) {
           if (redDetected) {
             // we are blue, red detected, go backward and knockOffJewel
-            encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 2); // go backwards to knock jewel off
-            robot.colorServo.setPosition(0.0); //lift arm back up
-            sleep(1000);
-            encoderDrive(SLOW_SPEED, -3.5, -3.5, -3.5, -3.5, 1.0); // go to original position
+            encoderDrive(SLOW_SPEED, 2, 2, 2); // go backwards to knock jewel off
+            moveColorServo(0);
+            //robot.colorServo.setPosition(0.0); //lift arm back up
+            //sleep(1000);
+            encoderDrive(SLOW_SPEED, -6.5, -6.5, 3.0); // go to original position
             return 1;
           } else{
             // we are blue and blue detected, go forward to knockOffJewel
-            encoderDrive(SLOW_SPEED, -3, -3, -3, -3, 2); // go backwards to knock jewel off
-            robot.colorServo.setPosition(0.0); //lift arm back up
-            sleep(1000);
+            encoderDrive(SLOW_SPEED, -3, -3, 2); // go backwards to knock jewel off
+            moveColorServo(0);
+            //robot.colorServo.setPosition(0.0); //lift arm back up
+            //sleep(1000);
             return 0;
           }
         } else {
           // must be red alliance
           if (redDetected) {
-            encoderDrive(SLOW_SPEED, -2, -2, -2, -2, 1.5); // go backwards to knock jewel off
-            robot.colorServo.setPosition(0.0); //lift arm back up
-            sleep(1000);
-            encoderDrive(SLOW_SPEED, 3, 3, 3, 3, 1.0); // go to original position
+            encoderDrive(SLOW_SPEED, -1.5, -1.5, 1.5); // go backwards to knock jewel off
+            moveColorServo(0);            
+            //robot.colorServo.setPosition(0.0); //lift arm back up
+            //sleep(1000);
+            encoderDrive(SLOW_SPEED, 4, 4, 1.0); // go to original position
             return 1;
           } else {
-            encoderDrive(SLOW_SPEED, 3, 3, 3, 3, 1.0); // go forwards to knock jewel off
-            robot.colorServo.setPosition(0.0); //lift arm back up
-            sleep(1000);
+            encoderDrive(SLOW_SPEED, 3, 3, 1.5); // go forwards to knock jewel off
+            moveColorServo(0);            
+            //robot.colorServo.setPosition(0.0); //lift arm back up
+            //sleep(1000);
             return 0;
           }
         }
@@ -422,94 +457,47 @@ public class VoyagerBotAuto extends VoyagerBotAutoTest {
 
     public void driveToCryptoBox(Orientation orientation, RelicRecoveryVuMark vuMark, int direction) {
         double cryptoOffset = 0;
-        if (orientation == Orientation.BLUE_1 || orientation == Orientation.BLUE_2 ) {
-          if (vuMark == RelicRecoveryVuMark.CENTER || vuMark == RelicRecoveryVuMark.UNKNOWN) {
-              cryptoOffset = CRYPTO_BOX_INCHES;
+        if (vuMark == RelicRecoveryVuMark.UNKNOWN){
+            vuMark = RelicRecoveryVuMark.RIGHT;
+        }
+        if (orientation == Orientation.BLUE_1) {
+          if (vuMark == RelicRecoveryVuMark.RIGHT ) {
+              cryptoOffset = -4.5;
+          } if (vuMark == RelicRecoveryVuMark.CENTER ) {
+              cryptoOffset = -12.5;
           } else if (vuMark == RelicRecoveryVuMark.LEFT ) {
-              cryptoOffset = 2 * CRYPTO_BOX_INCHES;
-          }              
-        } else {
-          if (vuMark == RelicRecoveryVuMark.CENTER || vuMark == RelicRecoveryVuMark.UNKNOWN) {
-              cryptoOffset = CRYPTO_BOX_INCHES;
-          } else if (vuMark == RelicRecoveryVuMark.RIGHT) {
-              cryptoOffset = 2 * CRYPTO_BOX_INCHES;
-          }              
-        }
-        if (orientation == Orientation.BLUE_1) {
-          blue_1_forward_internal(false, -5.0 - cryptoOffset, direction);
+              cryptoOffset = -20.5;
+          }             
+          blue_1_forward_internal(false, cryptoOffset, direction);
         } else if (orientation == Orientation.BLUE_2) { 
-          blue_2_forward_internal(false, 2 + cryptoOffset, direction);          
+          if (vuMark == RelicRecoveryVuMark.RIGHT ) {
+              cryptoOffset = 1.5;
+          } if (vuMark == RelicRecoveryVuMark.CENTER ) {
+              cryptoOffset = 10;
+          } else if (vuMark == RelicRecoveryVuMark.LEFT ) {
+              cryptoOffset = 17.5;
+          }               
+          blue_2_forward_internal(false, cryptoOffset, direction);          
         } else if (orientation == Orientation.RED_1) {
-          red_1_forward_internal(false, 6.5 + cryptoOffset, direction);
-        } else if (orientation == Orientation.RED_2) {    
-          red_2_forward_internal(false, 5 + cryptoOffset, direction);          
+          if (vuMark == RelicRecoveryVuMark.LEFT ) {
+              cryptoOffset = 5;
+          } if (vuMark == RelicRecoveryVuMark.CENTER ) {
+              cryptoOffset = 12.5;
+          } else if (vuMark == RelicRecoveryVuMark.RIGHT ) {
+              cryptoOffset = 20;
+          }              
+          red_1_forward_internal(grabSecond, cryptoOffset, direction);
+        } else if (orientation == Orientation.RED_2) {   
+          if (vuMark == RelicRecoveryVuMark.LEFT ) {
+              cryptoOffset = 4.5;
+          } if (vuMark == RelicRecoveryVuMark.CENTER ) {
+              cryptoOffset = 12;
+          } else if (vuMark == RelicRecoveryVuMark.RIGHT ) {
+              cryptoOffset = 19;
+          }               
+          red_2_forward_internal(false, cryptoOffset, direction);          
         }
-        // reset lift to lower position
-        //doGrabGlyph(false);
-        sleep(200);
-        encoderLift(0.5, 0, 1);
+
     }  
-    
-    public void driveToCryptoBox2(Orientation orientation, RelicRecoveryVuMark vuMark) {
-        double cryptoOffset = 0.0;
-        if (vuMark == RelicRecoveryVuMark.CENTER) {
-            cryptoOffset = CRYPTO_BOX_INCHES;
-        } else if (vuMark == RelicRecoveryVuMark.RIGHT) {
-            cryptoOffset = 2 * CRYPTO_BOX_INCHES;
-        }
-
-        if (orientation == Orientation.BLUE_1) {
-          double bd = -8;
-          bd = bd - cryptoOffset;
-          encoderDrive(SLOW_SPEED, -22, -22, -22, -22, 3.0); // go backwards
-          encoderDrive(SLOW_SPEED, bd, bd, bd, bd, 3.0); // go forwards    
-          encoderDrive(TURN_SPEED, 14, 14, -14, -14, 3.0); // turn right
-          encoderDrive(DRIVE_SPEED, 10, 10, 10, 10, 3.0); // go forwards
-          doGrabGlyph(false);
-          encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go forwards
-        } else if (orientation == Orientation.BLUE_2) {
-          double bd = 45;
-          encoderDrive(SLOW_SPEED, -26, -26, -26, -26, 3.0); // go backwards
-          if (vuMark == RelicRecoveryVuMark.CENTER) {
-            encoderDrive(TURN_SPEED, bd + 3, bd + 3, -bd - 3, -bd - 3, 3.0); // turn left              
-          } else if (vuMark == RelicRecoveryVuMark.RIGHT) {
-            encoderDrive(TURN_SPEED, bd + 8, bd +8 , -bd - 8, -bd - 8, 3.0); // turn left     
-          } else if (vuMark == RelicRecoveryVuMark.LEFT) {
-             encoderDrive(TURN_SPEED, bd, bd, -bd, -bd, 3.0); // 180                
-          }
-          encoderDrive(SLOW_SPEED, 6, 6, 6, 6, 3.0); // go forwards
-          doGrabGlyph(false);
-          encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go forwards
-        } else if (orientation == Orientation.RED_1) {
-          double bd = 2;
-          bd = bd + cryptoOffset;
-          encoderDrive(SLOW_SPEED, 20, 20, 20, 20, 3.0); // go forwards
-          encoderDrive(SLOW_SPEED, bd, bd, bd, bd, 3.0); // go forwards          
-          encoderDrive(TURN_SPEED, 16.44, 16.44, -16.44, -16.44, 3.0); // turn right
-          encoderDrive(DRIVE_SPEED, 10, 10, 10, 10, 3.0); // go forwards
-          doGrabGlyph(false);
-          encoderDrive(SLOW_SPEED, 2, 2, 2, 2, 1.0); // go forwards
-          encoderDrive(DRIVE_SPEED, -5, -5, -5,-5,3.0); // backwards
-
-        } else if (orientation == Orientation.RED_2) {
-          encoderDrive(SLOW_SPEED, 29, 29, 29, 29, 4); // go forwards to get off balance beam
-          if (vuMark == RelicRecoveryVuMark.RIGHT) {
-            encoderDrive(TURN_SPEED, -9, -9, 9, 9, 4.0); // turn left              
-          } else if (vuMark == RelicRecoveryVuMark.LEFT) {
-            encoderDrive(TURN_SPEED, -5, -5, 5, 5, 3.0);// turn left
-          } else if (vuMark == RelicRecoveryVuMark.CENTER) {
-            encoderDrive(TURN_SPEED, -7, -7, 7, 7, 3.0);
-          }
-          encoderDrive(SLOW_SPEED, 11, 11, 11, 11, 3.0); // go forwards
-          encoderDrive(TURN_SPEED, 3.5, 3.5, -3.5, -3.5, 3.0); // turn right to straighten up
-          doGrabGlyph(false);
-          if (vuMark == RelicRecoveryVuMark.RIGHT) {
-            encoderDrive(SLOW_SPEED, 6, 6, 6, 6, 3.0); // go forwards              
-          } else {
-            encoderDrive(SLOW_SPEED, 4.5, 4.5, 4.5, 4.5, 3.0); // go forwards
-          }
-          encoderDrive(DRIVE_SPEED, -5, -5, -5,-5,3.0); // backwards
-        }
-    }
     
 }
