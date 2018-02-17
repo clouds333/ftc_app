@@ -62,7 +62,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@Autonomous(name="Voyagerbot: Auto Drive By Encoder", group="Voyagerbot")
+@Autonomous(name="Voyagerbot: Single Test", group="Voyagerbot")
 //@Disabled
 public class VoyagerBotAutoTest extends GyroAuto {
 
@@ -75,11 +75,11 @@ public class VoyagerBotAutoTest extends GyroAuto {
     static final double     WHEEL_DIAMETER_INCHES   = 4.0 ;     // For figuring circumference
     static final double     COUNTS_PER_INCH         = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
                                                       (WHEEL_DIAMETER_INCHES * 3.1415);
-    static final double     TURN_SPEED              = 0.4;
+    static final double     TURN_SPEED              = 0.6;
     static final double     FORWARD_SPEED           = 0.6;
     static final double     DRIVE_SPEED             = 0.5;
     static final double     FAST_SPEED              = 0.7;
-    static final double     SLOW_SPEED              = 0.15;
+    static final double     SLOW_SPEED              = 0.2;
         
     @Override
     public void runOpMode() {
@@ -123,9 +123,10 @@ public class VoyagerBotAutoTest extends GyroAuto {
         // Step through each leg of the path,
         // Note: Reverse movement is obtained by setting a negative distance (not speed)
         doGrabGlyph(false);
-        encoderLift(0.8, 700, 3);  
-        //red_1_forward_test(false);
-        red_1_forward(false);
+        encoderLift(0.8, 400, 2);  
+        red_1_forward();
+        //red_1_forward();
+        //red_get_off_beam(0);
         //encoderDrive(SLOW_DRIVE_SPEED, 20, 20, 20, 20, 5.0);  // S1: Forward 47 Inches with 5 Sec timeout
         //encoderDrive(TURN_SPEED,   -18, -18, 18, 18, 4.0);  // S2: Turn Left 12 Inches with 4 Sec timeout
         //encoderDrive(SLOW_DRIVE_SPEED, 20, 20, 20, 20, 5.0); 
@@ -136,127 +137,237 @@ public class VoyagerBotAutoTest extends GyroAuto {
         telemetry.update();
     }
 
-    void blue_1_forward_internal(boolean grabSecond, double bd, int direction) {
-        if (direction == 0)
-            encoderDrive(SLOW_SPEED, -15, -15, -15, -15, 8.0);
-        else
-            encoderDrive(SLOW_SPEED, -19, -19, - 19, -19, 8.0);          
-        //double bd = -5;
-        //bd = bd - 8;
-        encoderDrive(FAST_SPEED, bd, bd, bd, bd, 5.0); // go forwards    
+    void blue_1_forward() {
+        double bd = -4.5;
+        encoderDrive(DRIVE_SPEED, bd, bd, 5.0); // go forwards    
         gyroTurn(TURN_SPEED, -90);
         gyroTurn(TURN_SPEED, -90);        
-        encoderDrive(FAST_SPEED, 5, 5, 5, 5, 5.0); // go forwards
+        encoderDrive(FAST_SPEED, 5, 5, 5.0); // go forwards
         doGrabGlyph(true);
-        encoderDrive(DRIVE_SPEED, 4, 4, 4, 4, 3.0); // go forwards   
-        encoderDrive(FAST_SPEED, -4, -4, -4,-4, 2.0); // backwards  
+        encoderDrive(DRIVE_SPEED, 4, 4, 3.0); // go forwards   
+        encoderDrive(FAST_SPEED, -4, -4, 2.0); // backwards  
         doGrabGlyph(false);        
-        encoderDrive(DRIVE_SPEED, 5, 5, 5, 5, 3.0); // go forwards   
-        encoderDrive(FAST_SPEED, -4, -4, -4,-4, 2.0); // backwards          
+        encoderDrive(DRIVE_SPEED, 5, 5, 3.0); // go forwards   
+        encoderDrive(FAST_SPEED, -4, -4, 2.0); // backwards  
+    }
+    
+    void blue_1_forward_internal(boolean grabSecond, double bd, int direction) {
+        if (direction == 0)
+            encoderDrive(SLOW_SPEED, -15, -15, 8.0);
+        else
+            encoderDrive(SLOW_SPEED, -19, -19, 8.0);
+        
+        // go forward a little to hit the balance beam
+        encoderDrive(DRIVE_SPEED, 2, 2, 1.0);
+        //double bd = -5;
+        //bd = bd - 8;
+        encoderDrive(FAST_SPEED, bd, bd, 5.0); // go forwards    
+        gyroTurn(TURN_SPEED, -90);
+        gyroTurn(TURN_SPEED, -90);        
+        encoderDrive(FAST_SPEED, 5, 5, 5.0); // go forwards
+        doGrabGlyph(true);
+        encoderDrive(DRIVE_SPEED, 4, 4, 3.0); // go forwards   
+        encoderDrive(FAST_SPEED, -5, -5, 2.0); // backwards  
+        encoderLift(0.6, 0, 1.5);              // lower lift          
+        doGrabGlyph(false);        
+        encoderDrive(DRIVE_SPEED, 6, 6, 3.0); // go forwards   
+        encoderDrive(FAST_SPEED, -4, -4, 2.0); // backwards          
+    }
+    
+    void blue_2_forward() {
+        double bd = 9;
+        encoderDrive(DRIVE_SPEED, -3, -3, 2.0); // go forwards         
+        gyroTurn(TURN_SPEED, 90 );
+        gyroTurn(TURN_SPEED, 90 );        
+        encoderDrive(FAST_SPEED, bd, bd, 2.0); // go forwards 
+        initGyro();
+        gyroTurn(TURN_SPEED, 90 );
+        gyroTurn(TURN_SPEED, 90 );        
+        //encoderDrive(DRIVE_SPEED, 2, 2, 2.0); // go forwards
+        doGrabGlyph(true);
+        encoderDrive(DRIVE_SPEED, 5, 5, 1.0); // go forwards
+        encoderDrive(FAST_SPEED, -5, -5, 2.0); // go backwards  
+        doGrabGlyph(false);
+        encoderDrive(FAST_SPEED, 6, 6, 2.0); // go forwards   
+        encoderDrive(FAST_SPEED, -4, -4, 2.0); // go forwards   
     }
     
     void blue_2_forward_internal(boolean grabSecond, double bd, int direction) {
         if (direction == 0)
-            encoderDrive(SLOW_SPEED, -17, -17, -17, -17, 8.0);
+            encoderDrive(SLOW_SPEED, -15, -15,  8.0);
         else
-            encoderDrive(SLOW_SPEED, -20, -20, - 20, -20, 8.0);        
-        //double bd = -5;
-        //bd = bd - 8;
+            encoderDrive(SLOW_SPEED, -19, -19, 8.0);        
+        // go forward a little to hit the balance beam
+        encoderDrive(DRIVE_SPEED, 2, 2, 1.0);   
+        
+        encoderDrive(DRIVE_SPEED, -3, -3, 2.0); // go forwards         
         gyroTurn(TURN_SPEED, 90 );
         gyroTurn(TURN_SPEED, 90 );        
-        encoderDrive(FAST_SPEED, bd, bd, bd, bd, 2.0); // go forwards 
-        initGyro();
+        encoderDrive(FAST_SPEED, bd, bd, 2.0); // go forwards 
+        //initGyro();
+        resetAngle();
         gyroTurn(TURN_SPEED, 90 );
         gyroTurn(TURN_SPEED, 90 );        
-        encoderDrive(DRIVE_SPEED, 2, 2, 2, 2, 2.0); // go forwards
+        encoderDrive(DRIVE_SPEED, 2, 2, 2.0); // go forwards
         doGrabGlyph(true);
-        encoderDrive(DRIVE_SPEED, 5, 5, 5, 5, 1.0); // go forwards
-        encoderDrive(FAST_SPEED, -5, -5, -5, -5, 2.0); // go backwards  
+        encoderDrive(DRIVE_SPEED, 5, 5, 1.0); // go forwards
+        encoderDrive(FAST_SPEED, -6, -6, 2.0); // go backwards  
+        encoderLift(0.6, 0, 1.5);              // lower lift          
         doGrabGlyph(false);
-        encoderDrive(FAST_SPEED, 6, 6, 6, 6, 2.0); // go forwards   
-        encoderDrive(FAST_SPEED, -5, -5, -5, -5, 2.0); // go forwards          
+        encoderDrive(FAST_SPEED, 7, 7, 2.0); // go forwards   
+        encoderDrive(FAST_SPEED, -4, -4, 2.0); // go forwards          
     }    
 
 
-    void red_2_forward_internal(boolean grabSecond, double bd, int direction) {
-        if (direction == 0)
-            encoderDrive(SLOW_SPEED, 15, 15, 15, 15, 8.0);
-        else
-            encoderDrive(SLOW_SPEED, 20, 20, 20, 20, 8.0);       
-        encoderDrive(DRIVE_SPEED, -1.5, -1.5, -1.5, -1.5, 1.0); // backup to straighten up  
-        encoderDrive(DRIVE_SPEED, 3, 3, 3, 3, 1.5); // backup to straighten up          
-        gyroTurn(TURN_SPEED, 90 );
-        gyroTurn(TURN_SPEED, 90 );        
-        encoderDrive(FAST_SPEED, bd, bd, bd, bd, 2.0); // go forwards 
-        initGyro();
-        gyroTurn(TURN_SPEED, -90 );
+    void red_2_forward() {
+        double bd = 4.5;
+        encoderDrive(DRIVE_SPEED, 4, 4, 1.5); // get off balancing beam          
+        gyroTurn(TURN_SPEED, 90 ); //turn 90 degrees
+        gyroTurn(TURN_SPEED, 90 ); 
+        encoderDrive(DRIVE_SPEED, bd, bd, 3.0); // go forwards 
+        //initGyro();
+        resetAngle();
+        gyroTurn(TURN_SPEED, -90 ); // turn back to pictograph
         gyroTurn(TURN_SPEED, -90 );        
-        encoderDrive(FAST_SPEED, 2, 2, 2, 2, 3.0); // go forwards
+        encoderDrive(FAST_SPEED, 1, 1, 3.0); // go forwards
         doGrabGlyph(true);
-        encoderDrive(DRIVE_SPEED, 4, 4, 4, 4, 2.0); // go forwards
-        encoderDrive(FAST_SPEED, -5, -5, -5, -5, 2.0); // go forwards
+        encoderDrive(DRIVE_SPEED, 4, 4, 2.0); // go forwards
+        encoderDrive(FAST_SPEED, -5, -5,  2.0); // go forwards
         doGrabGlyph(false);
-        encoderDrive(FAST_SPEED, 6, 6, 6, 6, 2.0); // go forwards   
-        encoderDrive(FAST_SPEED, -5, -5, -5, -5, 2.0); // go forwards          
+        encoderDrive(FAST_SPEED, 6, 6, 2.0); // go forwards   
+        encoderDrive(FAST_SPEED, -5, -5, 2.0); // go forwards         
     }
     
-    void red_1_forward(boolean grabSecond) {
-        red_1_forward_internal(grabSecond, 4.0, 0);
+    void red_2_forward_internal(boolean grabSecond, double bd, int direction) {
+        if (direction == 0)
+            encoderDrive(SLOW_SPEED, 15, 15, 8.0);
+        else
+            encoderDrive(SLOW_SPEED, 20, 20, 8.0);       
+        encoderDrive(DRIVE_SPEED, -3, -3, 1.0); // backup to straighten up  
+        encoderDrive(DRIVE_SPEED, 3, 3, 1.5); // get off balancing beam          
+        gyroTurn(TURN_SPEED, 90 ); //turn 90 degrees
+        gyroTurn(TURN_SPEED, 90 ); 
+        encoderDrive(FAST_SPEED, bd, bd, 2.0); // go forwards 
+        //initGyro();
+        resetAngle();
+        gyroTurn(TURN_SPEED, -90 ); // turn back to pictograph
+        gyroTurn(TURN_SPEED, -90 );        
+        encoderDrive(FAST_SPEED, 2, 2, 3.0); // go forwards
+        doGrabGlyph(true);
+        encoderDrive(DRIVE_SPEED, 4, 4, 2.0); // go forwards
+        encoderDrive(FAST_SPEED, -6, -6,  2.0); // go forwards
+        encoderLift(0.6, 10, 1.5);              // lower lift          
+        doGrabGlyph(false);
+        encoderDrive(FAST_SPEED, 7, 7, 2.0); // go forwards   
+        encoderDrive(FAST_SPEED, -6, -6, 2.0); // go forwards          
+    }
+    
+    void red_get_off_beam(int direction) {
+        if (direction == 0) {
+            encoderDrive(SLOW_SPEED, 3, 3, 1.5); // go forwards to knock jewel off        
+            encoderDrive(SLOW_SPEED, 14, 14, 5.0); // get off beam;    
+        } else {
+            encoderDrive(SLOW_SPEED, -1.5, -1.5, 1.5); // go backwards to knock jewel off
+            encoderDrive(SLOW_SPEED, 3, 3, 1.5); // go backwards to knock jewel off  
+            encoderDrive(SLOW_SPEED, 15, 15, 5.0); // get off beam;            
+        }
+    }
+    
+    void red_1_forward() {
+        double bd = 13;
+        encoderDrive(DRIVE_SPEED, bd, bd, 2.0); // go forwards  
+        gyroTurn(TURN_SPEED, -90 );
+        gyroTurn(TURN_SPEED, -90 );        
+        encoderDrive(FAST_SPEED, 5, 5, 1.0); // go forwards
+        doGrabGlyph(true);
+        encoderDrive(FAST_SPEED, 3, 3, 1.0); // go forwards
+        encoderDrive(FAST_SPEED, -5, -5, 1.5); // go backwards
+        encoderLift(0.6, 0, 1.5);              // lower lift           
+        doGrabGlyph(false);
+        encoderDrive(FAST_SPEED, 6, 6, 2.0); // go forwards   
+        encoderDrive(FAST_SPEED, -4, -4, 2.0);         
+        //asyncEncoderLift(0.6, 0, 1.5);
+        // second glyph
+            encoderDrive(FAST_SPEED, -6, -6, 2.0); // backwards
+            //initGyro();
+            resetAngle();
+            gyroTurn(TURN_SPEED, -90);
+            resetAngle();
+            gyroTurn(TURN_SPEED, -90);
+            //encoderLift(0.7, 0, 1.5);   
+            doGrabGlyph(true);
+            encoderDrive(0.9, 21, 21, 5.0); // try to grab a block
+            resetAngle();
+            gyroTurn(TURN_SPEED, -10);  
+            doGrabGlyph(false);
+            asyncEncoderLift(0.8, 700, 2);
+            resetAngle();
+            gyroTurn(TURN_SPEED, -170);
+            gyroTurn(TURN_SPEED, -170);            
+            encoderDrive(0.9, 28, 28, 4.0);
+            encoderDrive(DRIVE_SPEED, 6, 6, 1.0);
+            doGrabGlyph(true);
+            encoderDrive(FAST_SPEED, -4, -4, 2.0); 
+            encoderLift(0.7, 0, 2);
+        /*
+        encoderDrive(FAST_SPEED, 6, 6, 2.0); // go forwards   
+        encoderDrive(FAST_SPEED, -5, -5, 2.0); // go forwards  
+        */
     }
     
     void red_1_forward_internal(boolean grabSecond, double bd, int direction) {
         //bd = 4;
-        //encoderDrive(SLOW_SPEED, 20, 20, 20, 20, 8.0); // go forwards
+        //encoderDrive(SLOW_SPEED, 20, 20, 8.0); // go forwards
         if (direction == 0)
-            encoderDrive(SLOW_SPEED, 15, 15, 15, 15, 8.0);
+            encoderDrive(0.4, 13, 13, 2.5);
         else
-            encoderDrive(SLOW_SPEED, 20, 20, 20, 20, 8.0);     
-        encoderDrive(DRIVE_SPEED, -1.5, -1.5, -1.5, -1.5, 1.0); // backup to straighten up  
-        encoderDrive(DRIVE_SPEED, bd, bd, bd, bd, 2.0); // go forwards  
+            encoderDrive(SLOW_SPEED, 20, 20, 8.0);     
+        encoderDrive(DRIVE_SPEED, -4, -4, 0.5); // backup to straighten up  
+        encoderDrive(FAST_SPEED, bd, bd, 2.0); // go forwards  
         gyroTurn(TURN_SPEED, -90 );
         gyroTurn(TURN_SPEED, -90 );        
-        encoderDrive(FAST_SPEED, 5, 5, 5, 5, 3.0); // go forwards
+        encoderDrive(FAST_SPEED, 5, 5, 1.0); // go forwards
         doGrabGlyph(true);
-        encoderDrive(DRIVE_SPEED, 3, 3, 3, 3, 1.0); // go forwards
-        
+        encoderDrive(DRIVE_SPEED, 3, 3, 1.0); // go forwards
+        if (!grabSecond) {
+            encoderDrive(FAST_SPEED, -6, -6, 1.5); // go backwards 
+            encoderLift(0.6, 0, 1.5);              // lower lift        
+            doGrabGlyph(false);
+            encoderDrive(FAST_SPEED, 7, 7, 2.0); // go forwards   
+        }
         // Code to grab another block
         if (grabSecond) {
-            encoderDrive(FAST_SPEED, -10, -10, -10,-10,3.0); // backwards
-            encoderLift(0.7, 600, 1);
-            initGyro();
-            gyroTurn(TURN_SPEED, -180);
-            encoderDrive(FAST_SPEED, 22, 22, 22, 22, 6.0); // try to grab a block
+            encoderDrive(FAST_SPEED, -5, -5, 1); // go backwards 
+            encoderLift(0.7, 0, 1.5);              // lower lift        
             doGrabGlyph(false);
-            //doGrabTop(false);
-            doLift(1200);
-            initGyro();
-            gyroTurn(TURN_SPEED, -180);
-            encoderDrive(FAST_SPEED, 28, 28, 28, 28, 6.0);
+            encoderDrive(FAST_SPEED, 7, 7, 2.0); // go forwards               
+            encoderDrive(0.9, -10, -10, 2.0); // backwards
+            //doGrabGlyph(false);
+            //encoderLift(0.7, 0, 1); 
+            //initGyro();
+            resetAngle();
+            gyroTurn(TURN_SPEED, -90);
+            resetAngle();
+            gyroTurn(TURN_SPEED, -90);
+            //encoderLift(0.7, 0, 1.5);   
             doGrabGlyph(true);
-        } else {
-            encoderDrive(FAST_SPEED, -5, -5, -5, -5, 1.5); // go backwards  
+            encoderDrive(0.9, 21, 21, 2.0); // try to grab a block
+            resetAngle();
+            //gyroTurn(TURN_SPEED, -10);  
             doGrabGlyph(false);
-            encoderDrive(FAST_SPEED, 6, 6, 6, 6, 2.0); // go forwards   
-            encoderDrive(FAST_SPEED, -5, -5, -5, -5, 2.0); // go forwards  
+            asyncEncoderLift(0.8, 700, 2);
+            resetAngle();
+            gyroTurn(TURN_SPEED, -180);
+            gyroTurn(TURN_SPEED, -180);            
+            encoderDrive(0.9, 28, 28, 3.0);
+            encoderDrive(DRIVE_SPEED, 6, 6, 1.0);
+            doGrabGlyph(true);
+            encoderDrive(FAST_SPEED, -4, -4, 2.0); 
+            encoderLift(0.7, 0, 2);
+        } else {
+            encoderDrive(FAST_SPEED, -5, -5, 2.0); // go forwards  
         }
     }
-    
-    void red_1_backward_test() {
-        encoderDrive(SLOW_SPEED, -1, -1, -1, -1, 1.0);  
-        sleep(500);
-        encoderDrive(SLOW_SPEED, 3, 3, 3, 3, 2.0);        
-        double bd = 5;
-        bd = bd + 16;
-        encoderDrive(SLOW_SPEED, 20, 20, 20, 20, 8.0); // go forwards
-        encoderDrive(DRIVE_SPEED, bd, bd, bd, bd, 3.0); // go forwards        
-        gyroTurn(TURN_SPEED,90);
-        //encoderDrive(TURN_SPEED, 16.44, 16.44, -16.44, -16.44, 4.0); // turn right
-        encoderDrive(DRIVE_SPEED, 6, 6, 6, 6, 3.0); // go forwards
-     
-        doGrabGlyph(true);
-        encoderDrive(DRIVE_SPEED, 2, 2, 2, 2, 3.0); // go forwards 
-        encoderDrive(DRIVE_SPEED, -3, -3, -3,-3,3.0); // backwards        
-    }    
 
     
     public void doGrabGlyph(boolean topClose){
@@ -270,10 +381,21 @@ public class VoyagerBotAutoTest extends GyroAuto {
         robot.rightClaw.setPosition(robot.MID_SERVO - clawOffset);         
     }
     
+    public synchronized void asyncEncoderLift(final double speed, final int count, final double timeout) {
+        Runnable liftRunnable = new Runnable() {
+            public void run() {
+                encoderLift(speed, count, timeout);            
+            }
+        };
+        Thread thread = new Thread(liftRunnable);
+        thread.start();
+    }
+    
     public void encoderLift(double speed,
                          int count,
                          double timeoutS) {
     
+        ElapsedTime liftRuntime = new ElapsedTime();
         // Ensure that the opmode is still active
         if (opModeIsActive()) {
             robot.liftMotor.setTargetPosition(count);
@@ -282,7 +404,7 @@ public class VoyagerBotAutoTest extends GyroAuto {
             robot.liftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
             // reset the timeout time and start motion.
-            runtime.reset();
+            liftRuntime.reset();
             robot.liftMotor.setPower(Math.abs(speed));
 
             // keep looping while we are still active, and there is time left, and both motors are running.
@@ -292,20 +414,61 @@ public class VoyagerBotAutoTest extends GyroAuto {
             // However, if you require that BOTH motors have finished their moves before the robot continues
             // onto the next step, use (isBusy() || isBusy()) in the loop test.
             while (opModeIsActive() &&
-                   (runtime.seconds() < timeoutS) &&
+                   (liftRuntime.seconds() < timeoutS) &&
                    robot.liftMotor.isBusy()) {
 
                 // Display it for the driver.
-                telemetry.addData("lift Target",  "Running to %7d", count);
-                telemetry.addData("liftPosition ",  "Running at %7d",
-                                            robot.liftMotor.getCurrentPosition());
-                telemetry.update();
+                //telemetry.addData("lift Target",  "Running to %7d", count);
+                //telemetry.addData("liftPosition ",  "Running at %7d",
+                //                            robot.liftMotor.getCurrentPosition());
+                //telemetry.update();
             }
 
             // Stop all motion;
             robot.liftMotor.setPower(0);          
         }
     }
+    
+   public void relicArmExtend(double speed,
+                         int count,
+                         double timeoutS) {
+        double desiredSpeed;
+        // Ensure that the opmode is still active
+        if (opModeIsActive()) {
+            /*int curPosition = robot.motorRelicLift.getCurrentPositio();
+            if (curPosition > count) {
+                desiredSpeed = - speed;
+            }*/
+            robot.motorRelicLift.setTargetPosition(count);
+
+            // Turn On RUN_TO_POSITION
+            robot.motorRelicLift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+            // reset the timeout time and start motion.
+            runtime.reset();
+            robot.motorRelicLift.setPower(Math.abs(speed));
+
+            // keep looping while we are still active, and there is time left, and both motors are running.
+            // Note: We use (isBusy() && isBusy()) in the loop test, which means that when EITHER motor hits
+            // its target position, the motion will stop.  This is "safer" in the event that the robot will
+            // always end the motion as soon as possible.
+            // However, if you require that BOTH motors have finished their moves before the robot continues
+            // onto the next step, use (isBusy() || isBusy()) in the loop test.
+            while (opModeIsActive() &&
+                   (runtime.seconds() < timeoutS) &&
+                   robot.motorRelicLift.isBusy()) {
+
+                // Display it for the driver.
+                telemetry.addData("Relic lift Target",  "Running to %7d", count);
+                telemetry.addData("Relic lift ",  "Running at %7d",
+                                            robot.liftMotor.getCurrentPosition());
+                telemetry.update();
+            }
+
+            // Stop all motion;
+            robot.motorRelicLift.setPower(0);          
+        }
+    }    
     
     public void doLift(int count) {
         encoderLift(0.7, count, 2);
@@ -330,7 +493,7 @@ public class VoyagerBotAutoTest extends GyroAuto {
      *  3) Driver stops the opmode running.
      */
     public void encoderDrive(double speed,
-                             double leftInches1, double leftInches2, double rightInches1, double rightInches2,
+                             double leftInches1, double rightInches1,
                              double timeoutS) {
         int newLeftTarget1;
         int newLeftTarget2;
@@ -342,9 +505,9 @@ public class VoyagerBotAutoTest extends GyroAuto {
 
             // Determine new target position, and pass to motor controller
             newLeftTarget1 = robot.motorLeftFront.getCurrentPosition() + (int)(leftInches1 * COUNTS_PER_INCH);
-            newLeftTarget2 = robot.motorLeftBack.getCurrentPosition() + (int)(leftInches2 * COUNTS_PER_INCH);
+            newLeftTarget2 = robot.motorLeftBack.getCurrentPosition() + (int)(leftInches1 * COUNTS_PER_INCH);
             newRightTarget1 = robot.motorRightFront.getCurrentPosition() + (int)(rightInches1 * COUNTS_PER_INCH);
-            newRightTarget2 = robot.motorRightBack.getCurrentPosition() + (int)(rightInches2 * COUNTS_PER_INCH);
+            newRightTarget2 = robot.motorRightBack.getCurrentPosition() + (int)(rightInches1 * COUNTS_PER_INCH);
             
             robot.motorLeftFront.setTargetPosition(newLeftTarget1);
             robot.motorLeftBack.setTargetPosition(newLeftTarget2);
@@ -398,7 +561,7 @@ public class VoyagerBotAutoTest extends GyroAuto {
             robot.motorRightFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
             robot.motorRightBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-            sleep(250);   // optional pause after each move
+            sleep(100);   // optional pause after each move
         }
     }
 }
