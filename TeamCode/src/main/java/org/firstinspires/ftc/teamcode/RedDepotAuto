@@ -1,0 +1,111 @@
+package org.firstinspires.ftc.teamcode;
+
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.util.ElapsedTime;
+import java.lang.Math.*;
+
+@Autonomous(name="RedDepotAuto")
+public class RedDepotAuto extends LinearOpMode {
+    HardwarePushbot robot = new HardwarePushbot();
+    private ElapsedTime runtime = new ElapsedTime();
+
+    static final double COUNTS_PER_MOTOR_REV = 1440; 
+    static final double DRIVE_GEAR_REDUCTION = 2.0; // Gear
+    static final double WHEEL_DIAMETER_INCHES = 3.5; // Diameter of wheel
+    static final double COUNTS_PER_INCH = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) / (WHEEL_DIAMETER_INCHES * Math.PI);
+
+    static final double DRIVE_SPEED = 0.6 * 0.65;
+    static final double TURN_SPEED = 0.5 * 0.65;
+    
+
+    @Override
+    public void runOpMode() {
+        robot.init(hardwareMap);
+        telemetry.addData("IQ", "RESETTING ENCODERS");
+        telemetry.update();
+
+        robot.leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        robot.rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        robot.linearSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        robot.leftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        robot.leftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        robot.linearSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        robot.teamMarker.setPosition(0.0);
+
+        telemetry.addData("Path0", "Starting with linearSlide at %7d, leftDrive at %7d, rightDrive at %7d",
+                robot.leftDrive.getCurrentPosition(),
+                robot.rightDrive.getCurrentPosition(),
+                robot.linearSlide.getCurrentPosition());
+        telemetry.update();
+
+        waitForStart();
+        // 90 degrees = 11.8, -11.8
+        //moveLS(DRIVE_SPEED, 3, 5.0);
+        encoderDrive(DRIVE_SPEED, 3.5, 3.5, 5.0); // get off hook
+        encoderDrive(DRIVE_SPEED, -9.1, 9.1, 5.0);// turn to face minerals
+        encoderDrive(DRIVE_SPEED, -40, -40, 5.0); // drive back to team depot
+        encoderDrive(DRIVE_SPEED, -25, 25, 5.0); //180 turn to knock mineral
+        encoderDrive(DRIVE_SPEED, 10, 10, 5);
+        robot.teamMarker.setPosition(1.0); // knock team marker
+        sleep(1000);
+        //encoderDrive(DRIVE_SPEED, 5.4, -5.4,5);
+        encoderDrive(DRIVE_SPEED, -30.4, -30.4, 5.0); // drive forward
+        encoderDrive(DRIVE_SPEED, 9.8, -9.8, 5.0); // turn to reach team section
+        encoderDrive(DRIVE_SPEED, -30, -30, 5.0); // forward to wall
+        encoderDrive(DRIVE_SPEED, -5.2, 5.2, 5.0); // turn to face team section
+        encoderDrive(DRIVE_SPEED, -57, -57, 5.0); // go to team section
+        
+        telemetry.addData("PATH", "COMPLETE");
+        telemetry.update();
+    }
+
+    public void encoderDrive(double speed, double leftInches, double rightInches, double timeoutS) {
+        int newLeftTarget;
+        int newRightTarget;
+
+        if(opModeIsActive()) {
+            newLeftTarget = robot.leftDrive.getCurrentPosition() + (int)(leftInches * 4 / 9 * 24 / 28.5 * COUNTS_PER_INCH);
+            newRightTarget = robot.rightDrive.getCurrentPosition() + (int)(rightInches * 4 / 9 * 24 / 28.5 * COUNTS_PER_INCH);
+            robot.leftDrive.setTargetPosition(newLeftTarget);
+            robot.rightDrive.setTargetPosition(newRightTarget);
+
+            robot.leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            robot.rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+            runtime.reset();
+            robot.leftDrive.setPower(Math.abs(speed)*1.02);
+            robot.rightDrive.setPower(Math.abs(speed));
+            
+            while(opModeIsActive() && (runtime.seconds() < timeoutS) && (robot.leftDrive.isBusy() && robot.rightDrive.isBusy())) {
+            }
+            
+            robot.leftDrive.setPower(0);
+            robot.rightDrive.setPower(0);
+
+            robot.leftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            robot.rightDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        }
+    }
+    public void moveLS(double speed, double inches, double timeout) {
+        int newTarget;
+        inches = inches * -1;
+        if(opModeIsActive()) {
+            newTarget = robot.linearSlide.getCurrentPosition() + (int)(inches * COUNTS_PER_INCH);
+            robot.linearSlide.setTargetPosition(newTarget);
+
+            robot.linearSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+            runtime.reset();
+            robot.linearSlide.setPower(Math.abs(speed));
+
+            while(opModeIsActive() && (runtime.seconds() < timeout) && robot.linearSlide.isBusy()) {
+            }
+            robot.linearSlide.setPower(0);
+
+            robot.linearSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        }
+    }
+}
